@@ -1,0 +1,13 @@
+spring:
+  config:
+    active:
+      on-profile: test-container
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+logging:
+  level:
+    org:
+      testcontainers: DEBUG

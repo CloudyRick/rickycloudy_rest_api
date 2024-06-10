@@ -1,0 +1,40 @@
+Configuration:
+  status: warn
+  name: MyApp
+  Appenders:
+    Console:
+      name: Console
+      target: SYSTEM_OUT
+      PatternLayout:
+        Pattern: "%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"
+    RollingFile:
+      name: RollingFile
+      fileName: "logs/app.log"
+      filePattern: "logs/app-%d{MM-dd-yyyy}.log.gz"
+      PatternLayout:
+        Pattern: "%d{yyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"
+      Policies:
+        TimeBasedTriggeringPolicy:
+          interval: 1
+          modulate: true
+      DefaultRolloverStrategy:
+        max: 30
+  Loggers:
+    Root:
+      level: error
+      AppenderRef:
+        - ref: Console
+        - ref: RollingFile
+    Logger:
+      - name: reactor
+        level: debug
+      - name: org.springframework.r2dbc
+        level: debug
+      - name: org.testcontainers
+        level: debug
+      - name: dev.rickcloudy.restapi
+        level: debug
+        additivity: false
+        AppenderRef:
+          - ref: Console
+          - ref: RollingFile

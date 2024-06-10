@@ -1,0 +1,31 @@
+server:
+  port: 8088
+
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  r2dbc:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    database: ${DB_NAME}
+  flyway:
+    locations: classpath:db/migration
+    enabled: true
+    url: ${FLYWAY_URL}
+    user: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    baseline-on-migrate: true
+aws:
+  accessKeyId: ${AWS_ACCESS_KEY_ID}
+  secretKey: ${AWS_SECRET_ACCESS_KEY}
+  region: ${AWS_REGION}
+
+logging:
+  level:
+    org:
+      springframework:
+        r2dbc: DEBUG
+      testcontainers: DEBUG
+    reactor: DEBUG
+#    root: debug
