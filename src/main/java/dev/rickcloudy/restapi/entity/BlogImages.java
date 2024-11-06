@@ -17,6 +17,7 @@ public class BlogImages {
     private Long id;
     private Long blogPostId;
     private String imageUrl;
+    private String imageKey;
     private String alt;
     private String caption;
     private String credit;
@@ -31,6 +32,7 @@ public class BlogImages {
         return Objects.equals(id, that.id) &&
                 Objects.equals(blogPostId, that.blogPostId) &&
                 Objects.equals(imageUrl, that.imageUrl) &&
+                Objects.equals(imageKey, that.imageKey) &&
                 Objects.equals(alt, that.alt) &&
                 Objects.equals(caption, that.caption) &&
                 Objects.equals(credit, that.credit) &&
@@ -39,6 +41,6 @@ public class BlogImages {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, blogPostId, imageUrl, alt, caption, credit, type);
+        return Objects.hash(id, blogPostId, imageUrl, imageKey, alt, caption, credit, type);
     }
 }

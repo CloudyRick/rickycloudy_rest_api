@@ -2,8 +2,8 @@ package dev.rickcloudy.restapi.service;
 
 import dev.rickcloudy.restapi.dto.ResponseDTO;
 import dev.rickcloudy.restapi.enums.UserStatus;
-import dev.rickcloudy.restapi.exception.EmailAlreadyExistsException;
-import dev.rickcloudy.restapi.exception.UsernameAlreadyExistsException;
+import dev.rickcloudy.restapi.exception.custom.EmailAlreadyExistsException;
+import dev.rickcloudy.restapi.exception.custom.UsernameAlreadyExistsException;
 import dev.rickcloudy.restapi.repository.UserRepository;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

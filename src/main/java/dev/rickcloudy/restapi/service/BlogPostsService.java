@@ -4,9 +4,9 @@ import dev.rickcloudy.restapi.dto.BlogPostsDTO;
 import dev.rickcloudy.restapi.entity.BlogImages;
 import dev.rickcloudy.restapi.entity.BlogPosts;
 import dev.rickcloudy.restapi.enums.BlogStatus;
-import dev.rickcloudy.restapi.exception.BlogPostNotFoundException;
+import dev.rickcloudy.restapi.exception.custom.BlogPostNotFoundException;
 import dev.rickcloudy.restapi.exception.HttpException;
-import dev.rickcloudy.restapi.exception.UserNotFoundException;
+import dev.rickcloudy.restapi.exception.custom.UserNotFoundException;
 import dev.rickcloudy.restapi.mapper.BlogPostMapper;
 import dev.rickcloudy.restapi.repository.BlogImagesRepository;
 import dev.rickcloudy.restapi.repository.BlogPostsRepository;
@@ -21,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -39,17 +38,26 @@ public class BlogPostsService {
 
     @Transactional
     public Mono<BlogPostsDTO> createBlogPost(BlogPosts blogPost, Flux<FilePart> images) {
+        List<String> imageKey = new ArrayList<>();
         return userRepository.findById(blogPost.getAuthorId())
                 .switchIfEmpty(Mono.error(new UserNotFoundException(HttpStatus.NOT_FOUND, "User Not Found")))
                 .flatMap(user -> blogPostsRepository.save(blogPost))
                 .flatMap(savedBlogPost -> {
                             return saveImage(images, savedBlogPost.getId())
+                                    .doOnNext(res -> {
+                                        imageKey.add(res.getImageKey());
+                                        log.debug("Key {}", imageKey);
+                                    })
                                     .collectList()
                                     .map(savedImages -> {
                                         BlogPostsDTO dto = mapper.blogPostsToBlogPostsDTO(savedBlogPost);
                                         dto.setImages(savedImages);
                                         return dto;
                                     });
+                        })
+                        .doOnError(err -> {
+                            // Delete the uploaded images if an error occurs
+                            imageKey.forEach(s3Service::deleteRickCloudyBlogImage);
                         });
     }
 
@@ -59,6 +67,7 @@ public class BlogPostsService {
                     BlogImages blogImages = BlogImages.builder()
                             .blogPostId(blogPostId)
                             .imageUrl(res.getUrl())
+                            .imageKey(res.getKey())
                             .build();
                     return imagesRepository.save(blogImages);
                 })

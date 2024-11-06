@@ -1,4 +1,3 @@
--- DROP DATABASE IF EXISTS rickcloudy_dev;
 CREATE TABLE IF NOT EXISTS users (
                                      id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                      first_name VARCHAR(100) NOT NULL,

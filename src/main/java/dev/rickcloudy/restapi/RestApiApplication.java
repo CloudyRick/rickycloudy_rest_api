@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.r2dbc.repository.config.EnableR2dbcRepositories;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "dev.rickcloudy.restapi")
 @EnableR2dbcRepositories(basePackages = "dev.rickcloudy.restapi.repository")
 public class RestApiApplication {
 

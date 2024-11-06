@@ -3,7 +3,7 @@ package dev.rickcloudy.restapi.repository;
 
 import dev.rickcloudy.restapi.config.UnitTestingContainerized;
 import dev.rickcloudy.restapi.entity.Users;
-import dev.rickcloudy.restapi.exception.UserNotFoundException;
+import dev.rickcloudy.restapi.exception.custom.UserNotFoundException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.*;

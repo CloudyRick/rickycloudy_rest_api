@@ -1,4 +1,3 @@
-/*
 package dev.rickcloudy.restapi.service;
 
 import dev.rickcloudy.restapi.config.TestContainerBeanConfiguration;
@@ -9,8 +8,10 @@ import dev.rickcloudy.restapi.enums.BlogStatus;
 import dev.rickcloudy.restapi.enums.ImageType;
 import dev.rickcloudy.restapi.enums.UserStatus;
 import dev.rickcloudy.restapi.entity.Users;
-import dev.rickcloudy.restapi.exception.BlogPostNotFoundException;
+import dev.rickcloudy.restapi.exception.custom.BlogPostNotFoundException;
 import dev.rickcloudy.restapi.exception.HttpException;
+import dev.rickcloudy.restapi.exception.custom.FileUploadException;
+import dev.rickcloudy.restapi.exception.custom.UserNotFoundException;
 import dev.rickcloudy.restapi.helper.ReactiveLogger;
 import dev.rickcloudy.restapi.repository.BlogImagesRepository;
 import dev.rickcloudy.restapi.repository.BlogPostsRepository;
@@ -21,18 +22,29 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DefaultDataBufferFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.test.context.ActiveProfiles;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.ZonedDateTime;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @SpringBootTest
 @ActiveProfiles("test-container")
@@ -50,6 +62,8 @@ class BlogPostsServiceTest {
     UserRepository userRepository;
     @Autowired
     BlogImagesRepository imagesRepository;
+    @Autowired
+    S3Service s3Service;
     private final Long userId = 121212414L;
     @BeforeEach
     void setUp() {
@@ -77,42 +91,29 @@ class BlogPostsServiceTest {
     }
 
     @Test
-    void createBlogPost_Given_ValidBlogPostAndImages_When_CreateBlogPost_Expect_BlogPostAndImagesCreated() {
-        // Given a valid BlogPosts object and a list of BlogImages objects
+    void createBlogPost_Given_ValidBlogPostAndImages_When_CreateBlogPost_Expect_BlogPostAndImagesCreated() throws IOException {
+        // Given a valid BlogPosts object
         BlogPosts blogPost = BlogPosts.builder()
                 .title("Test Title")
                 .content("Test Content")
                 .authorId(userId)
                 .createdAt(ZonedDateTime.now())
                 .build();
-        // Given
-        BlogImages blogImage = BlogImages.builder()
-                .imageUrl("http://example.com/image.jpg")
-                .alt("Example Image")
-                .caption("This is an example image")
-                .credit("John Doe")
-                .type(ImageType.JPEG)
-                .createdAt(ZonedDateTime.now())
-                .build();
-        // Given
-        BlogImages blogImage2 = BlogImages.builder()
-                .imageUrl("http://example.com/image.jpg")
-                .alt("Example Image")
-                .caption("This is an example image")
-                .credit("John Doe")
-                .type(ImageType.JPEG)
-                .createdAt(ZonedDateTime.now())
-                .build();
 
-        List<BlogImages> images = new ArrayList<>();
-        images.add(blogImage);
-        images.add(blogImage2);
+        // Path to the file
+        Path path = Paths.get("/home/ricky/Downloads/dice-1502706_640.jpg");
+
+        // Read the file into a DataBuffer
+        DataBuffer dataBuffer = new DefaultDataBufferFactory().wrap(Files.readAllBytes(path));
+
+        // Create a FilePart from the DataBuffer
+        FilePart filePart = new MockFilePart(path.getFileName().toString(), Flux.just(dataBuffer));
+        Flux<FilePart> images = Flux.just(filePart);
 
         // When createBlogPost is called
         Mono<BlogPostsDTO> createdBlogPost = blogPostsService.createBlogPost(blogPost, images);
 
         // Then a BlogPostsDTO object should be created and returned
-        // And the BlogImages objects should be saved and associated with the BlogPostsDTO object
         StepVerifier.create(createdBlogPost)
                 .assertNext(dto -> {
                     assertNotNull(dto.getId());
@@ -120,11 +121,66 @@ class BlogPostsServiceTest {
                     assertEquals(blogPost.getContent(), dto.getContent());
                     assertEquals(blogPost.getAuthorId(), dto.getAuthorId());
                     assertNotNull(dto.getImages());
-                    assertEquals(2, dto.getImages().size());
+                    assertEquals(1, dto.getImages().size());
                 })
                 .verifyComplete();
     }
 
+    @Test
+    void createBlogPost_Given_ValidBlogPostAndNotValidImage_When_SaveImageFails_Expect_Error() {
+        // Given a valid BlogPosts object
+        BlogPosts blogPost = BlogPosts.builder()
+                .title("Test Title")
+                .content("Test Content")
+                .authorId(userId)
+                .createdAt(ZonedDateTime.now())
+                .build();
+
+        // Given a Flux<FilePart> object
+        DefaultDataBufferFactory bufferFactory = new DefaultDataBufferFactory();
+        DataBuffer buffer1 = bufferFactory.wrap("Test Content 1".getBytes());
+        DataBuffer buffer2 = bufferFactory.wrap("Test Content 2".getBytes());
+
+        FilePart filePart1 = new MockFilePart("file1", Flux.just(buffer1));
+        FilePart filePart2 = new MockFilePart("file2", Flux.just(buffer2));
+        FilePart filePart3 = new MockFilePart("file3", Flux.error(new RuntimeException("Anjaay")));
+        Flux<FilePart> images = Flux.just(filePart1, filePart2, filePart3);
+
+        // When createBlogPost is called
+        Mono<BlogPostsDTO> createdBlogPost = blogPostsService.createBlogPost(blogPost, images);
+
+        // Then an error should be thrown
+        StepVerifier.create(createdBlogPost)
+                .expectError(FileUploadException.class)
+                .verify();
+    }
+    @Test
+    void createBlogPost_Given_NotValidBlogPostAndValidImage_When_SaveImageFails_Expect_Error() {
+        // Given a valid BlogPosts object
+        BlogPosts blogPost = BlogPosts.builder()
+                .title("Test Title")
+                .content("Test Content")
+                .authorId(11111L)
+                .createdAt(ZonedDateTime.now())
+                .build();
+
+        // Given a Flux<FilePart> object
+        DefaultDataBufferFactory bufferFactory = new DefaultDataBufferFactory();
+        DataBuffer buffer1 = bufferFactory.wrap("Test Content 1".getBytes());
+        DataBuffer buffer2 = bufferFactory.wrap("Test Content 2".getBytes());
+
+        FilePart filePart1 = new MockFilePart("file1", Flux.just(buffer1));
+        FilePart filePart2 = new MockFilePart("file2", Flux.just(buffer2));
+        Flux<FilePart> images = Flux.just(filePart1, filePart2);
+
+        // When createBlogPost is called
+        Mono<BlogPostsDTO> createdBlogPost = blogPostsService.createBlogPost(blogPost, images);
+
+        // Then an error should be thrown
+        StepVerifier.create(createdBlogPost)
+                .expectError(UserNotFoundException.class)
+                .verify();
+    }
     @Test
     void updateBlogPost_Given_ValidBlogPost_When_UpdateBlogPost_Expect_BlogPostUpdated() {
         // Given a valid BlogPosts object
@@ -312,4 +368,40 @@ class BlogPostsServiceTest {
                 .expectError(HttpException.class)
                 .verify();
     }
-}*/
+
+    static class MockFilePart implements FilePart {
+
+        private final String filename;
+        private final Flux<DataBuffer> contentFlux;
+
+        MockFilePart(String filename, Flux<DataBuffer> contentFlux) {
+            this.filename = filename;
+            this.contentFlux = contentFlux;
+        }
+
+        @Override
+        public String filename() {
+            return filename;
+        }
+
+        @Override
+        public Mono<Void> transferTo(Path dest) {
+            return Mono.empty();
+        }
+
+        @Override
+        public String name() {
+            return "file";
+        }
+
+        @Override
+        public HttpHeaders headers() {
+            return HttpHeaders.EMPTY;
+        }
+
+        @Override
+        public Flux<DataBuffer> content() {
+            return contentFlux;
+        }
+    }
+}

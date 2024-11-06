@@ -2,7 +2,7 @@ package dev.rickcloudy.restapi.repository;
 
 
 import dev.rickcloudy.restapi.entity.Users;
-import dev.rickcloudy.restapi.exception.UserNotFoundException;
+import dev.rickcloudy.restapi.exception.custom.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.r2dbc.core.R2dbcEntityTemplate;
 import org.springframework.data.relational.core.query.Criteria;

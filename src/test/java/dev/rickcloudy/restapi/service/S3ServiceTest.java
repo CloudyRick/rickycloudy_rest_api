@@ -23,7 +23,9 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -43,10 +45,15 @@ class S3ServiceTest {
     }
 
     @Test
-    void uploadBlogImages_successfulUpload() {
-        // Mock FilePart
-        FilePart filePart = new MockFilePart("test-image.txt", "test-image-content".getBytes());
+    void uploadBlogImages_successfulUpload() throws IOException {
+        // Path to the file
+        Path path = Paths.get("/home/ricky/Downloads/dice-1502706_640.jpg");
 
+        // Read the file into a DataBuffer
+        DataBuffer dataBuffer = new DefaultDataBufferFactory().wrap(Files.readAllBytes(path));
+
+        // Create a FilePart from the DataBuffer
+        FilePart filePart = new MockFilePart(path.getFileName().toString(), Flux.just(dataBuffer));
         // Execute the service method
         Flux<UploadResult> resultFlux = s3Service.uploadBlogImages(Flux.just(filePart));
 
@@ -54,7 +61,7 @@ class S3ServiceTest {
         StepVerifier.create(resultFlux)
                 .expectNextMatches(uploadResult -> {
                     // Verify the URL format
-                    boolean urlMatches = uploadResult.getUrl().startsWith("https://rickcloudy-blog.s3.ap-southeast-2.amazonaws.com/");
+                    boolean urlMatches = uploadResult.getUrl().startsWith("https://rickcloudy-blog-images.s3.ap-southeast-2.amazonaws.com/");
                     // Cleanup the uploaded file
                     String key = uploadResult.getKey();
                     return urlMatches;
@@ -66,11 +73,11 @@ class S3ServiceTest {
     static class MockFilePart implements FilePart {
 
         private final String filename;
-        private final byte[] content;
+        private final Flux<DataBuffer> contentFlux;
 
-        MockFilePart(String filename, byte[] content) {
+        MockFilePart(String filename, Flux<DataBuffer> contentFlux) {
             this.filename = filename;
-            this.content = content;
+            this.contentFlux = contentFlux;
         }
 
         @Override
@@ -95,8 +102,7 @@ class S3ServiceTest {
 
         @Override
         public Flux<DataBuffer> content() {
-            DataBuffer dataBuffer = new DefaultDataBufferFactory().wrap(content);
-            return Flux.just(dataBuffer);
+            return contentFlux;
         }
     }
 }

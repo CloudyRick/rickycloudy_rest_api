@@ -24,7 +24,7 @@ public class DbConfig {
     }
 
     @Bean
-    ConnectionFactoryInitializer intiializer(ConnectionFactory connectionFactory) {
+    ConnectionFactoryInitializer intializer(ConnectionFactory connectionFactory) {
         var initializer = new ConnectionFactoryInitializer();
         initializer.setConnectionFactory(connectionFactory);
 
