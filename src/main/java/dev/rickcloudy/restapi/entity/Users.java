@@ -15,13 +15,15 @@ import java.util.Objects;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
+//import org.springframework.security.core.GrantedAuthority;
+//import org.springframework.security.core.userdetails.UserDetails;
 
 @Table(name = "users")
 @Data
 @Builder
-public class Users implements UserDetails {
+@AllArgsConstructor
+@NoArgsConstructor
+public class Users {
     @Id
     private Long id;
     @NotBlank(message = "First name cannot be blank")
@@ -66,28 +68,28 @@ public class Users implements UserDetails {
         return Objects.hash(id, firstName, lastName, email, username, password, status);
     }
 
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
-    }
-
-    @Override
-    public boolean isAccountNonExpired() {
-        return false;
-    }
-
-    @Override
-    public boolean isAccountNonLocked() {
-        return false;
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired(String token) {
-        return false;
-    }
-
-    @Override
-    public boolean isEnabled() {
-        return false;
-    }
+//    @Override
+//    public Collection<? extends GrantedAuthority> getAuthorities() {
+//        return List.of();
+//    }
+//
+//    @Override
+//    public boolean isAccountNonExpired() {
+//        return false;
+//    }
+//
+//    @Override
+//    public boolean isAccountNonLocked() {
+//        return false;
+//    }
+//
+//    @Override
+//    public boolean isCredentialsNonExpired() {
+//        return false;
+//    }
+//
+//    @Override
+//    public boolean isEnabled() {
+//        return false;
+//    }
 }

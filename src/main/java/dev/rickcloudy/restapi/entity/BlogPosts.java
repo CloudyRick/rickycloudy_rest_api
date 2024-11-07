@@ -2,8 +2,10 @@ package dev.rickcloudy.restapi.entity;
 
 import dev.rickcloudy.restapi.enums.BlogStatus;
 import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.relational.core.mapping.MappedCollection;
@@ -16,6 +18,8 @@ import java.util.Objects;
 @Table(name = "blog_posts")
 @Data
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class BlogPosts {
     @Id
     private Long id;

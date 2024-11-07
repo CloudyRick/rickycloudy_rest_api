@@ -4,6 +4,7 @@ import dev.rickcloudy.restapi.dto.ResponseDTO;
 import dev.rickcloudy.restapi.enums.UserStatus;
 import dev.rickcloudy.restapi.exception.custom.EmailAlreadyExistsException;
 import dev.rickcloudy.restapi.exception.custom.UsernameAlreadyExistsException;
+import dev.rickcloudy.restapi.mapper.UserMapper;
 import dev.rickcloudy.restapi.repository.UserRepository;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -13,7 +14,6 @@ import org.springframework.stereotype.Service;
 
 import dev.rickcloudy.restapi.dto.UserDTO;
 import dev.rickcloudy.restapi.entity.Users;
-import dev.rickcloudy.restapi.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.Errors;

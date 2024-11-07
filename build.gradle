@@ -11,7 +11,7 @@ java {
 }
 
 ext {
-	mapstructVersion = "1.6.0.Beta1"
+	mapstructVersion = "1.5.3.Final"
 	lombokVersion = "1.18.30"
 	lombokMapstructBindingVersion = "0.2.0"
 }
@@ -34,7 +34,7 @@ springBoot {
 
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-security'
+//    implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-data-r2dbc'
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
@@ -49,10 +49,8 @@ dependencies {
     implementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.19.0'
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.15.2'
     implementation group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.15.2'
-    implementation "org.mapstruct:mapstruct:${mapstructVersion}"
     implementation platform('org.testcontainers:testcontainers-bom:1.19.7')
-    compileOnly "org.projectlombok:lombok:1.18.16"
-    annotationProcessor "org.projectlombok:lombok"
+    implementation "org.mapstruct:mapstruct:${mapstructVersion}"
     annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
     runtimeOnly 'com.mysql:mysql-connector-j'
     runtimeOnly 'io.asyncer:r2dbc-mysql'
@@ -66,8 +64,11 @@ dependencies {
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.mockito:mockito-core:3.12.4'
     testImplementation 'org.mockito:mockito-junit-jupiter:3.12.4'
-    testCompileOnly 'org.projectlombok:lombok'
-    testAnnotationProcessor "org.projectlombok:lombok"
+    implementation "org.projectlombok:lombok-mapstruct-binding:${lombokMapstructBindingVersion}"
+    testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
+    testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
     testAndDevelopmentOnly 'org.springframework.boot:spring-boot-devtools'
 }
 

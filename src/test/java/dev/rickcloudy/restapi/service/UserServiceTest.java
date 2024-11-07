@@ -1,5 +1,6 @@
 package dev.rickcloudy.restapi.service;
 
+import dev.rickcloudy.restapi.config.TestContainerBeanConfiguration;
 import dev.rickcloudy.restapi.config.UnitTestingContainerized;
 import dev.rickcloudy.restapi.dto.ResponseDTO;
 import dev.rickcloudy.restapi.dto.UserDTO;
@@ -13,7 +14,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.context.ActiveProfiles;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
@@ -22,7 +26,10 @@ import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@UnitTestingContainerized
+@SpringBootTest
+@ActiveProfiles("test-container")
+@Import(TestContainerBeanConfiguration.class)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class UserServiceTest {
 

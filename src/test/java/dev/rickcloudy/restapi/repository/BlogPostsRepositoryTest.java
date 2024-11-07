@@ -1,5 +1,6 @@
 package dev.rickcloudy.restapi.repository;
 
+import dev.rickcloudy.restapi.config.TestContainerBeanConfiguration;
 import dev.rickcloudy.restapi.config.UnitTestingContainerized;
 import dev.rickcloudy.restapi.entity.BlogPosts;
 import dev.rickcloudy.restapi.enums.UserStatus;
@@ -11,7 +12,11 @@ import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -24,7 +29,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-@UnitTestingContainerized
+@SpringBootTest
+@ActiveProfiles("test-container")
+@Import(TestContainerBeanConfiguration.class)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+//@UnitTestingContainerized
 class BlogPostsRepositoryTest {
 
     @Autowired

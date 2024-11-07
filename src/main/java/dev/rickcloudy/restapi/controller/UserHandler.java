@@ -18,11 +18,9 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 import dev.rickcloudy.restapi.dto.ResponseDTO;
 import dev.rickcloudy.restapi.service.UserService;
 import lombok.RequiredArgsConstructor;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -48,6 +46,7 @@ public class UserHandler implements Handler {
 						return Mono.just(ResponseDTO.fail(null, errorMessage));
 					}
 					return userService.save(user)
+							.doOnNext(saved -> LOG.debug("{}", saved))
 							.map(savedUser -> ResponseDTO.success(savedUser, "User created successfully"));
 				})
 				.flatMap(responseDTO -> ServerResponse.status(responseDTO.isSuccess() ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST)
