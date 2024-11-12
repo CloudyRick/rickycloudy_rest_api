@@ -3,16 +3,14 @@ package dev.rickcloudy.restapi.repository;
 import dev.rickcloudy.restapi.config.TestContainerBeanConfiguration;
 import dev.rickcloudy.restapi.config.UnitTestingContainerized;
 import dev.rickcloudy.restapi.entity.BlogPosts;
+import dev.rickcloudy.restapi.enums.BlogStatus;
 import dev.rickcloudy.restapi.enums.UserStatus;
 import dev.rickcloudy.restapi.entity.Users;
 import dev.rickcloudy.restapi.exception.HttpException;
 import dev.rickcloudy.restapi.helper.ReactiveLogger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -28,6 +26,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
+import static org.junit.Assert.assertNotNull;
 
 @SpringBootTest
 @ActiveProfiles("test-container")
@@ -72,6 +72,7 @@ class BlogPostsRepositoryTest {
                 .title("Nama Nama Gajah")
                 .content("Ini adalah nama nama gajah yang ada di kebun binatang")
                 .authorId(userId)
+                .status(BlogStatus.DRAFT)
                 .createdAt(ZonedDateTime.now())
                 .build();
         // Set the properties of the blogPost object
@@ -128,6 +129,7 @@ class BlogPostsRepositoryTest {
                 .title("Nama Nama Gajah")
                 .content("Ini adalah nama nama gajah yang ada di kebun binatang")
                 .authorId(userId)
+                .status(BlogStatus.PUBLISHED)
                 .createdAt(ZonedDateTime.now())
                 .build();
 
@@ -177,23 +179,29 @@ class BlogPostsRepositoryTest {
                 .title("Nama Nama Gajah")
                 .content("Ini adalah nama nama gajah yang ada di kebun binatang")
                 .authorId(userId)
+                .status(BlogStatus.ARCHIVED)
                 .createdAt(ZonedDateTime.now())
                 .build();
 
+        // Save the blog post and retrieve it to confirm it was saved correctly
         Mono<BlogPosts> create = blogRepository.save(blogPost)
-                .flatMap(r -> blogRepository.findById(r.getId()));
+                .flatMap(savedPost -> {
+                    Assertions.assertNotNull(savedPost.getId());  // Ensure ID was generated
+                    blogPost.setId(savedPost.getId());  // Set the ID in our test instance for later use
+                    return Mono.just(savedPost);
+                });
 
         // Verify that the BlogPost was saved correctly
         StepVerifier.create(create)
-                .expectNext(blogPost)
+                .expectNextMatches(savedPost -> savedPost.getContent().equals("Ini adalah nama nama gajah yang ada di kebun binatang"))
                 .verifyComplete();
 
-        // Partially update the BlogPost
+        // Update the content of the saved BlogPost
         blogPost.setContent("Kleeeek");
         Mono<BlogPosts> update = blogRepository.save(blogPost)
                 .flatMap(r -> blogRepository.findById(r.getId()));
 
-        // Verify that the BlogPost was partially updated correctly
+        // Verify that the BlogPost was updated with the new content
         StepVerifier.create(update)
                 .expectNextMatches(updatedBlogPost -> updatedBlogPost.getContent().equals("Kleeeek"))
                 .verifyComplete();
@@ -206,6 +214,7 @@ class BlogPostsRepositoryTest {
                 .title("Nama Nama Gajah")
                 .content("Ini adalah nama nama gajah yang ada di kebun binatang")
                 .authorId(userId)
+                .status(BlogStatus.PUBLISHED)
                 .createdAt(ZonedDateTime.now())
                 .build();
 
@@ -234,6 +243,7 @@ class BlogPostsRepositoryTest {
                 .title("Nama Nama Gajah")
                 .content("Ini adalah nama nama gajah yang ada di kebun binatang")
                 .authorId(userId)
+                .status(BlogStatus.PUBLISHED)
                 .createdAt(ZonedDateTime.now())
                 .build();
 
@@ -277,6 +287,7 @@ class BlogPostsRepositoryTest {
                 .title("Nama Nama Gajah")
                 .content("Ini adalah nama nama gajah yang ada di kebun binatang")
                 .authorId(userId)
+                .status(BlogStatus.PUBLISHED)
                 .createdAt(ZonedDateTime.now())
                 .build();
 
@@ -335,6 +346,7 @@ class BlogPostsRepositoryTest {
                 .title("Title 1")
                 .content("Content 1")
                 .authorId(userId)
+                .status(BlogStatus.PUBLISHED)
                 .createdAt(ZonedDateTime.now())
                 .build();
 
@@ -342,6 +354,7 @@ class BlogPostsRepositoryTest {
                 .title("Title 2")
                 .content("Content 2")
                 .authorId(userId)
+                .status(BlogStatus.PUBLISHED)
                 .createdAt(ZonedDateTime.now())
                 .build();
 

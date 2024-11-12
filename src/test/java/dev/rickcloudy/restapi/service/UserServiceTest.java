@@ -78,11 +78,13 @@ class UserServiceTest {
     void setUp() {
         userRepository.deleteAll().block();
         userService.saveAll(Flux.just(user, user2, user3)).collectList().block();
+        long count = userRepository.count().block();
+        System.out.println("Number of users in the database before method: " + count);
     }
 
     @AfterEach
     void tearDown() {
-        userRepository.deleteAll().block();
+//        userRepository.deleteAll().block();
         long count = userRepository.count().block();
         System.out.println("Number of users in the database after deletion: " + count);
     }
@@ -163,7 +165,7 @@ class UserServiceTest {
                 .email("newuser@gmail.com")
                 .username("newuser")
                 .status(UserStatus.ACTIVE)
-                .password("password123")
+                .password("Password1")
                 .createdAt(ZonedDateTime.now())
                 .build();
 
@@ -174,7 +176,7 @@ class UserServiceTest {
                 .email("rickycahyadi23@gmail.com")
                 .username("rckychydii1da")
                 .status(UserStatus.ACTIVE)
-                .password("anjing123")
+                .password("password")
                 .createdAt(ZonedDateTime.now())
                 .build();
 
@@ -185,12 +187,13 @@ class UserServiceTest {
                 .email("syahnaindira@gmail.com1")
                 .username("syhnaa")
                 .status(UserStatus.ACTIVE)
-                .password("anjing123")
+                .password("password")
                 .createdAt(ZonedDateTime.now())
                 .build();
 
         List<Users> users = Arrays.asList(newUser, existingUser, existingUser2);
-
+        System.out.println("Hereeeeeeeeeeee");
+        System.out.println(users);
         // Call the method under test and collect the results into a list
         List<ResponseDTO<UserDTO>> results = userService.saveAll(Flux.fromIterable(users)).log().collectList().block();
 

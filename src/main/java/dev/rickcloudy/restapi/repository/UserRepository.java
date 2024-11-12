@@ -43,6 +43,14 @@ public class UserRepository {
 					log.debug("Failed to create user");
 				});
 	}
+
+	public Flux<Users> saveAll(List<Users> users) {
+		return Flux.fromIterable(users)
+				.flatMap(this::save)
+				.doOnNext(res -> log.debug("User saved with id {}", res.getId()))
+				.doOnError(error -> log.error("Error saving users batch", error));
+	}
+
 	public Mono<Users> findById(Long id) {
 		return template.select(Users.class)
 						.from("users")
@@ -70,6 +78,7 @@ public class UserRepository {
 				})
 				.switchIfEmpty(Mono.error(new UserNotFoundException(HttpStatus.BAD_REQUEST, "User with email " + email + " does not exists")));
 	}
+
 	public Mono<Users> findByUsername(String username) {
 		return template.select(Users.class)
 				.from("users")
@@ -160,7 +169,7 @@ public class UserRepository {
 				.matching(Query.query(criteria))
 				.all();
 	}
-	
+
 	public Mono<Void> deleteAll() {
 		return template.delete(Users.class)
 				.from("users")

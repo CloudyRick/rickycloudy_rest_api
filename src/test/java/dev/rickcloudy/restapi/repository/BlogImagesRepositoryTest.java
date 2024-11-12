@@ -367,6 +367,7 @@ class BlogImagesRepositoryTest {
         return BlogImages.builder()
                 .blogPostId(blogPostId)
                 .imageUrl("http://example.com/image.jpg")
+                .imageKey("asas/asas_asas_image.jpg")
                 .alt("Example Image")
                 .caption("This is an example image")
                 .credit("John Doe")

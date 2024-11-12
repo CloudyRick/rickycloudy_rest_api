@@ -1,6 +1,7 @@
 package dev.rickcloudy.restapi.repository;
 
 
+import dev.rickcloudy.restapi.config.TestContainerBeanConfiguration;
 import dev.rickcloudy.restapi.config.UnitTestingContainerized;
 import dev.rickcloudy.restapi.entity.Users;
 import dev.rickcloudy.restapi.exception.custom.UserNotFoundException;
@@ -10,17 +11,25 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import dev.rickcloudy.restapi.enums.UserStatus;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-
-@UnitTestingContainerized
+@SpringBootTest
+@ActiveProfiles("test-container")
+@Import(TestContainerBeanConfiguration.class)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+//@UnitTestingContainerized
 public class UserRepositoryTest {
 
 	private static final Logger log = LogManager.getLogger(UserRepositoryTest.class);
@@ -49,6 +58,54 @@ public class UserRepositoryTest {
 					.expectNext(user)
 					.verifyComplete();
 	}
+
+	@Test
+	public void saveAll_given_NewUsers_when_SaveAllUsers_then_ReturnSavedUsers() {
+		// Given a list of new users
+		Users user1 = Users.builder()
+				.id(102931111100L)
+				.firstName("Rickya")
+				.lastName("Cahyadi")
+				.email("rickycahyadi23@gmail.com1s")
+				.username("rckychydii1da")
+				.status(UserStatus.ACTIVE)
+				.password("A")
+				.createdAt(ZonedDateTime.now())
+				.build();
+
+		Users user2 = Users.builder()
+				.id(102931111101L)
+				.firstName("Johana")
+				.lastName("Doe")
+				.email("johndoe123@example.com")
+				.username("johndoe")
+				.status(UserStatus.ACTIVE)
+				.password("password123")
+				.createdAt(ZonedDateTime.now())
+				.build();
+
+		List<Users> users = Arrays.asList(user1, user2);
+
+		// When saveAll is called
+		Flux<Users> result = userRepository.saveAll(users);
+
+		// Then verify the results in any order
+		StepVerifier.create(result)
+				.expectNextCount(2)  // Expect exactly 2 users to be emitted
+				.expectComplete()
+				.verify();
+
+		// Optionally, verify that the users are saved in the database
+		Mono<Users> savedUser1 = userRepository.findById(user1.getId());
+		Mono<Users> savedUser2 = userRepository.findById(user2.getId());
+
+		StepVerifier.create(savedUser1)
+				.expectNext(user1)
+				.verifyComplete();
+
+		StepVerifier.create(savedUser2)
+				.expectNext(user2)
+				.verifyComplete();	}
 
 	@Test
 	void findByEmail_given_twoUser_when_findByEmail_then_returnUserWithThatEmail() {
