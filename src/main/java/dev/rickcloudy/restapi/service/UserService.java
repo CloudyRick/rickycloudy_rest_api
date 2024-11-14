@@ -23,6 +23,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,13 +35,16 @@ public class UserService {
 	private final Validator validator;
 
 	public Mono<UserDTO> save(Users user) {
-
-		// Validate the entity using the Validator
+	// Set up the Errors object
 		Errors errors = new BeanPropertyBindingResult(user, "user");
-		var violations = validator.validate(user, errors);
-		if (!violations.isEmpty()) {
+
+		// Validate the entity
+		validator.validate(user, errors);
+
+		// Check if there are any validation errors
+		if (errors.hasErrors()) {
 			StringBuilder errorMessage = new StringBuilder("Validation failed: ");
-			violations.forEach(v -> errorMessage.append(v.getMessage()).append(" "));
+			errors.getAllErrors().forEach(error -> errorMessage.append(error.getDefaultMessage()).append(" "));
 			return Mono.error(new HttpException(HttpStatus.BAD_REQUEST, errorMessage.toString()));
 		}
 

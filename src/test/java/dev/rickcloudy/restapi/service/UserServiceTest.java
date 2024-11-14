@@ -8,6 +8,7 @@ import dev.rickcloudy.restapi.entity.Users;
 import dev.rickcloudy.restapi.enums.UserStatus;
 import dev.rickcloudy.restapi.exception.custom.EmailAlreadyExistsException;
 import dev.rickcloudy.restapi.exception.HttpException;
+import dev.rickcloudy.restapi.exception.custom.UserNotFoundException;
 import dev.rickcloudy.restapi.mapper.UserMapper;
 import dev.rickcloudy.restapi.repository.UserRepository;
 import org.apache.logging.log4j.LogManager;
@@ -50,7 +51,7 @@ class UserServiceTest {
             .email("rickycahyadi23@gmail.com")
             .username("rckychydii1da")
             .status(UserStatus.ACTIVE)
-            .password("anjing123")
+            .password("Anjing123!")
             .createdAt(ZonedDateTime.now())
             .build();
     static Users user2 = Users.builder()
@@ -60,7 +61,7 @@ class UserServiceTest {
             .email("syahnaindira@gmail.com1")
             .username("syhnaa")
             .status(UserStatus.ACTIVE)
-            .password("anjing123")
+            .password("Anjing123!")
             .createdAt(ZonedDateTime.now())
             .build();
     static Users user3 = Users.builder()
@@ -70,7 +71,7 @@ class UserServiceTest {
             .email("mimilovee@gmail.com1")
             .username("mimilovee")
             .status(UserStatus.ACTIVE)
-            .password("anjing123")
+            .password("Anjing123!")
             .createdAt(ZonedDateTime.now())
             .build();
 
@@ -103,7 +104,7 @@ class UserServiceTest {
                 .email("rickycahyadi23@gmail.com")
                 .username("rckychydii1da")
                 .status(UserStatus.ACTIVE)
-                .password("anjing123")
+                .password("Anjing123!")
                 .createdAt(ZonedDateTime.now())
                 .build();
         UserDTO userDTO = mapper.userToDto(user);
@@ -122,7 +123,7 @@ class UserServiceTest {
                 .email("rickycahyadi23@gmail.com")
                 .username("rckychydii1da")
                 .status(UserStatus.ACTIVE)
-                .password("anjing123")
+                .password("Anjing123!")
                 .createdAt(ZonedDateTime.now())
                 .build();
         StepVerifier.create(userService.save(user))
@@ -142,7 +143,7 @@ class UserServiceTest {
                 .email("rickycahyadi2333@gmail.com")
                 .username("rckychydii1da")
                 .status(UserStatus.ACTIVE)
-                .password("anjing123")
+                .password("Anjing123!")
                 .createdAt(ZonedDateTime.now())
                 .build();
         StepVerifier.create(userService.save(user))
@@ -236,7 +237,7 @@ class UserServiceTest {
         StepVerifier.create(userService.findById(randomInt))
                 .expectErrorMatches(throwable ->
                                 throwable instanceof HttpException
-                                && ((HttpException) throwable).getHttpStatus() == HttpStatus.BAD_REQUEST
+                                && ((HttpException) throwable).getHttpStatus() == HttpStatus.NOT_FOUND
                                 && throwable.getMessage().contains("User with ID " + randomInt + " does not exists"))
                 .verify();
     }
