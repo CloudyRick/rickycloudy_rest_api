@@ -376,7 +376,6 @@ class BlogImagesRepositoryTest {
         blogImagesRepository.save(blogImage2).block();
 
         // Act: Call findAllByImageKeys with a subset of keys
-        // Act: Call findAllByImageKeys with a subset of keys
         Set<String> requestedKeys = blogImagesRepository.findByBlogPostId(blogPostId)
                 .map(BlogImages::getImageKey)
                 .collect(Collectors.toSet())

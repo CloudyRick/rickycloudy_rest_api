@@ -64,7 +64,6 @@ public class S3Service {
                         return uploadRickCloudyBlogImage(uniqueKey, combined);
                     });
         })
-                .doOnError(res -> log.error("Error uploading file: {}", res.getMessage()))
                 .doOnNext(res -> log.info("File uploaded successfully: {}", res.getUrl()))
                 .doOnComplete(() -> log.info("All files uploaded successfully"))
                 .onErrorMap(err -> {
