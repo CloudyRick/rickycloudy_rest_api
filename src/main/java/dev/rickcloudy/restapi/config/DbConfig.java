@@ -2,6 +2,8 @@ package dev.rickcloudy.restapi.config;
 
 import io.r2dbc.spi.ConnectionFactory;
 import io.r2dbc.spi.ConnectionFactoryOptions;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.r2dbc.ConnectionFactoryBuilder;
 import org.springframework.context.annotation.Bean;
@@ -17,7 +19,8 @@ import org.springframework.transaction.ReactiveTransactionManager;
 
 @Configuration
 public class DbConfig {
-    
+    private static Logger log = LogManager.getLogger(DbConfig.class);
+
     @Bean
     ReactiveTransactionManager transactionManager(ConnectionFactory connectionFactory) {
     	return new R2dbcTransactionManager(connectionFactory);

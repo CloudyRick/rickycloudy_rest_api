@@ -29,7 +29,6 @@ import java.util.Map;
 @ActiveProfiles("test-container")
 @Import(TestContainerBeanConfiguration.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-//@UnitTestingContainerized
 public class UserRepositoryTest {
 
 	private static final Logger log = LogManager.getLogger(UserRepositoryTest.class);

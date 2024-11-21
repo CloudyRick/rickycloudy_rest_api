@@ -21,10 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -93,7 +91,7 @@ public class BlogPostsService {
                 });
     }
 
-    public Flux<BlogPosts> getAllBlogPosts() {
+    public Flux<BlogPostsDTO> getAllBlogPosts() {
         return blogPostsRepository.findAll()
                 .flatMap(blogPost -> {
                     if (blogPost.getStatus() == BlogStatus.DELETED) {
@@ -106,12 +104,12 @@ public class BlogPostsService {
                     return imagesRepository.findByBlogPostId(blogPost.getId())
                             .collectList()
                             .doOnNext(blogPostsDTO::setImages)
-                            .thenReturn(blogPost);
+                            .thenReturn(blogPostsDTO);
                 });
     }
 
     @Transactional
-    public Mono<BlogPosts> updateBlogPost(Long id, BlogPosts blogPost) {
+    public Mono<BlogPosts> updateBlogPost(Long id, BlogPosts blogPost, Flux<FilePart> images    ) {
             return this.getBlogPost(id)
                     .flatMap(blogPostsDTO -> {
                         return Mono.just(mapper.dtoToBlogPosts(blogPostsDTO));
@@ -127,6 +125,56 @@ public class BlogPostsService {
                     existingBlogPost.setContent(blogPost.getContent());
                     return blogPostsRepository.save(existingBlogPost);
                 });
+    }
+
+//    private Mono<List<BlogImages>> handleImageChanges(Long blogPostId, Flux<FilePart> images) {
+//        Flux<BlogImages> existingImage = imagesRepository.findByBlogPostId(blogPostId);
+//
+//        Mono<Set<String>> existingImageKey = existingImage.map(BlogImages::getImageKey)
+//                .collect(Collectors.toSet());
+//        // Filter out images that are already saved (i.e., they have existing image keys)
+//        Flux<FilePart> newImages = images.filterWhen(image -> existingImageKey
+//                .map(keys -> !keys.contains(image.filename())));
+//
+//        // Find the removed images (those that are in the DB but not in the updated form)
+//        Mono<Set<String>> newImageKeys = images
+//                .map(FilePart::filename) // Get the filenames of new images
+//                .collect(Collectors.toSet()); // Collect them into a Set asynchronously
+//
+//        // You need to wait for `existingImageKey` to resolve asynchronously in a non-blocking way
+//        return existingImageKey
+//                .zipWith(newImageKeys) // Combine both sets (existing and new images)
+//                .flatMap(tuple -> {
+//                    Set<String> existingKeys = tuple.getT1(); // Extract existing image keys
+//                    Set<String> newKeys = tuple.getT2(); // Extract new image keys
+//
+//                    // Find removed image keys (those that are in the DB but not in the new form)
+//                    Set<String> removedImageKeys = existingKeys.stream()
+//                            .filter(key -> !newKeys.contains(key))
+//                            .collect(Collectors.toSet());
+//
+//                    // Delete removed images from the database and the storage
+//                    return deleteRemovedImages(removedImageKeys)
+//                            .then(saveImage(newImages, existingBlogPost.getId())) // Save the new images
+//                            .flatMap(savedImages -> {
+//                                // Combine the new saved images with the existing (not deleted) images
+//                                List<BlogImages> allImages = existingBlogPost.getImages().stream()
+//                                        .filter(image -> !removedImageKeys.contains(image.getImageKey())) // Remove the deleted images
+//                                        .collect(Collectors.toList());
+//                                allImages.addAll(savedImages); // Add the newly saved images
+//                                return Mono.just(allImages); // Return the updated image list
+//                            });
+//                });
+//    }
+
+    private Mono<Void>  deleteRemovedImages(Set<String> removedImageKeys) {
+        if (removedImageKeys.isEmpty()) {
+            return Mono.empty(); // No images to delete
+        }
+        return imagesRepository.findAllByImageKeys(removedImageKeys)
+                .flatMap(blogImages -> s3Service.deleteRickCloudyBlogImage(blogImages.getImageKey())
+                        .then(imagesRepository.delete(blogImages)))
+                .then();
     }
 
     public Mono<Void> deleteBlogPost(Long id) {

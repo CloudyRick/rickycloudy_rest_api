@@ -26,10 +26,13 @@ import reactor.test.StepVerifier;
 
 import java.time.ZonedDateTime;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -83,6 +86,7 @@ class BlogImagesRepositoryTest {
         blogPostsRepository.deleteAll().block();
         usersRepository.deleteAll().block();
     }
+
 
     @Test
     void save_given_NewBlogImage_when_SaveBlogImage_then_ReturnBlogImage() {
@@ -360,6 +364,29 @@ class BlogImagesRepositoryTest {
         // Then
         StepVerifier.create(result)
                 .expectNextCount(0)
+                .verifyComplete();
+    }
+
+    @Test
+    void findAllByImageKeys_givenExistingImageKeys_whenFindAllByImageKeys_thenReturnMatchingImages() {
+        Long blogPostId = this.blogPostId; // replace with a valid blogPostId
+        BlogImages blogImage1 = createNewBlogImage();
+        BlogImages blogImage2 = createNewBlogImage();
+        blogImagesRepository.save(blogImage1).block();
+        blogImagesRepository.save(blogImage2).block();
+
+        // Act: Call findAllByImageKeys with a subset of keys
+        // Act: Call findAllByImageKeys with a subset of keys
+        Set<String> requestedKeys = blogImagesRepository.findByBlogPostId(blogPostId)
+                .map(BlogImages::getImageKey)
+                .collect(Collectors.toSet())
+                .block();
+        Flux<BlogImages> result = blogImagesRepository.findAllByImageKeys(requestedKeys);
+
+        // Assert: Verify only the matching images are returned
+        StepVerifier.create(result)
+                .expectNextMatches(image -> image.getImageKey().equals("asas/asas_asas_image.jpg") && image.getImageUrl().equals("http://example.com/image.jpg"))
+                .expectNextMatches(image -> image.getImageKey().equals("asas/asas_asas_image.jpg") && image.getImageUrl().equals("http://example.com/image.jpg"))
                 .verifyComplete();
     }
 

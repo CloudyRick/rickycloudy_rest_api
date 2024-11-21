@@ -7,6 +7,7 @@ import org.apache.logging.log4j.Logger;
 
 @Getter
 @Setter
+@NoArgsConstructor
 @AllArgsConstructor
 @ToString
 public class ResponseDTO<T> {

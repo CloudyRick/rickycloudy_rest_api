@@ -46,7 +46,6 @@ public class UserHandler implements Handler {
 						return Mono.just(ResponseDTO.fail(null, errorMessage));
 					}
 					return userService.save(user)
-							.doOnNext(saved -> LOG.debug("{}", saved))
 							.map(savedUser -> ResponseDTO.success(savedUser, "User created successfully"));
 				})
 				.flatMap(responseDTO -> ServerResponse.status(responseDTO.isSuccess() ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST)

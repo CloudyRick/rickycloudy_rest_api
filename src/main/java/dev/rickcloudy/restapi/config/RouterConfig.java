@@ -1,5 +1,6 @@
 package dev.rickcloudy.restapi.config;
 
+import dev.rickcloudy.restapi.controller.BlogPostHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.server.RouterFunction;
@@ -23,16 +24,16 @@ public class RouterConfig {
 				.GET("/users/", handler::findByParams)
 				.build();
 	}
-	/*@Bean
-	public RouterFunction<ServerResponse> blogRoutes(BlogHandler handler) {
-		return route().POST()
-				.GET() // Get By Id
-				.PUT()
-				.DELETE()
-				.GET() // Get All
-				.GET() // Search
+	@Bean
+	public RouterFunction<ServerResponse> blogRoutes(BlogPostHandler handler) {
+		return route().POST("/blogs", handler::save)
+//				.GET() // Get By Id
+//				.PUT()
+//				.DELETE()
+//				.GET() // Get All
+//				.GET() // Search
 				.build();
-	}*/
+	}
 	/*@Bean
 	public RouterFunction<ServerResponse> fileRoute(FileHandler handler) {
 		return route().POST()

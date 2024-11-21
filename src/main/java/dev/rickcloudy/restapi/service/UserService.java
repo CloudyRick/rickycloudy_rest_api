@@ -66,10 +66,8 @@ public class UserService {
 
 	public Flux<ResponseDTO<UserDTO>> saveAll(Flux<Users> users) {
 		return users.flatMap(user -> {
-			log.info("Processing user: {}", user.getEmail());
 			Errors errors = new BeanPropertyBindingResult(user, "user");
 			validator.validate(user, errors);
-			log.info("Processing2 user: {}", user.getEmail());
 //			Validate the input from the entity class
 //			Like Password needs to be 8 char bla bla bla, Maximum x char bla bla bla
 			if (errors.hasErrors()) {
@@ -77,10 +75,8 @@ public class UserService {
 						.stream()
 						.map(DefaultMessageSourceResolvable::getDefaultMessage)
 						.collect(Collectors.joining(", "));
-				log.warn("Validation failed for user {} with errors: {}", user.getEmail(), errorMessage);
 				return Mono.just(ResponseDTO.fail(mapper.userToDto(user), errorMessage));
 			}
-			log.info("Processing3 user: {}", user.getEmail());
 			return this.save(user)
 					.doOnNext(res -> log.info("save on next"))
 					.flatMap(res -> {

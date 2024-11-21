@@ -264,7 +264,7 @@ class UserServiceTest {
         StepVerifier.create(userService.findById(randomInt))
                 .expectErrorMatches(throwable ->
                         throwable instanceof HttpException
-                                && ((HttpException) throwable).getHttpStatus() == HttpStatus.BAD_REQUEST
+                                && ((HttpException) throwable).getHttpStatus() == HttpStatus.NOT_FOUND
                                 && throwable.getMessage().contains("User with ID " + randomInt + " does not exists"))
                 .verify();
     }
