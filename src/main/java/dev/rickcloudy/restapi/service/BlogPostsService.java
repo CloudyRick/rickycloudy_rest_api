@@ -7,6 +7,7 @@ import dev.rickcloudy.restapi.enums.BlogStatus;
 import dev.rickcloudy.restapi.exception.custom.BlogPostNotFoundException;
 import dev.rickcloudy.restapi.exception.HttpException;
 import dev.rickcloudy.restapi.exception.custom.UserNotFoundException;
+import dev.rickcloudy.restapi.helper.ReactiveLogger;
 import dev.rickcloudy.restapi.mapper.BlogPostMapper;
 import dev.rickcloudy.restapi.repository.BlogImagesRepository;
 import dev.rickcloudy.restapi.repository.BlogPostsRepository;
@@ -123,7 +124,6 @@ public class BlogPostsService {
                     }
                     existingBlogPost.setTitle(blogPost.getTitle());
                     existingBlogPost.setContent(blogPost.getContent());
-
                     // If new images are provided, handle them
                     if (images != null) {
                         return this.handleImageChanges(id, images)
@@ -159,6 +159,7 @@ public class BlogPostsService {
 
         Mono<Set<String>> existingImageKey = existingImage.map(BlogImages::getImageKey)
                 .collect(Collectors.toSet());
+
         // Filter out images that are already saved (i.e., they have existing image keys)
         Flux<FilePart> newImages = images.filterWhen(image -> existingImageKey
                 .map(keys -> !keys.contains(image.filename())));
@@ -187,7 +188,6 @@ public class BlogPostsService {
                                 List<BlogImages> allImages = existingBlogPost.getImages().stream()
                                         .filter(image -> !removedImageKeys.contains(image.getImageKey()))
                                         .collect(Collectors.toList());
-                                allImages.addAll(savedImages);
                                 return allImages;
                             }));
                 });
@@ -198,8 +198,10 @@ public class BlogPostsService {
             return Mono.empty(); // No images to delete
         }
         return imagesRepository.findAllByImageKeys(removedImageKeys)
-                .flatMap(blogImages -> s3Service.deleteRickCloudyBlogImage(blogImages.getImageKey())
-                        .then(imagesRepository.delete(blogImages)))
+                .flatMap(blogImages -> {
+                    return s3Service.deleteRickCloudyBlogImage(blogImages.getImageKey())
+                            .then(imagesRepository.delete(blogImages));
+                })
                 .then();
     }
 

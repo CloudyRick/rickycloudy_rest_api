@@ -183,61 +183,76 @@ class BlogPostsServiceTest {
     }
 
     @Test
-    void updateBlogPost_Given_ValidBlogPost_When_UpdateBlogPost_Expect_BlogPostUpdated() {
-        // Given a valid BlogPosts object
-        BlogPosts savedBlog = BlogPosts.builder()
-                .title("Nama Nama Anjing")
-                .content("Ini adalah nama nama anjing yang ada di kebun binatang")
+    void updateBlogPost_Given_ValidBlogPost_When_UpdateBlogPost_Expect_BlogPostUpdated() throws IOException {
+        // Given: Save an existing BlogPost in the repository
+        BlogPosts existingBlogPost = BlogPosts.builder()
+                .title("Original Title")
+                .content("Original Content")
                 .authorId(userId)
                 .createdAt(ZonedDateTime.now())
                 .build();
-        blogPostsRepository.save(savedBlog).block();
+        BlogPosts savedBlogPost = blogPostsRepository.save(existingBlogPost).block();
 
-        BlogPosts updateBlog = BlogPosts.builder()
-                .id(savedBlog.getId())
+        // Updated BlogPost object
+        BlogPosts updateBlogPost = BlogPosts.builder()
+                .id(savedBlogPost.getId())
                 .title("Updated Title")
                 .content("Updated Content")
                 .authorId(userId)
                 .build();
 
-        // Mock existing images
+        // Save an existing image in the repository
         BlogImages existingImage = BlogImages.builder()
                 .imageKey("existing-image.jpg")
-                .imageUrl("http://example.com/image.jpg")
-                .blogPostId(savedBlog.getId())
+                .imageUrl("http://example.com/existing.jpg")
+                .blogPostId(savedBlogPost.getId())
                 .build();
         imagesRepository.save(existingImage).block();
 
-        // Mock new images as Flux<FilePart>
-        FilePart newImagePart = Mockito.mock(FilePart.class);
-        Mockito.when(newImagePart.filename()).thenReturn("new-image.jpg");
-        Flux<FilePart> images = Flux.just(newImagePart);
+        // Path to a new image file
+        Path path = Paths.get("src/test/resources/test-image.jpg");
 
-        // Mock S3 and image repository behaviors
-        Mockito.when(s3Service.deleteRickCloudyBlogImage("existing-image.jpg")).thenReturn(Mono.empty());
-        Mockito.when(imagesRepository.delete(existingImage)).thenReturn(Mono.empty());
-        Mockito.when(imagesRepository.save(Mockito.any(BlogImages.class)))
-                .thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
+        // Read the file into a DataBuffer
+        DataBuffer dataBuffer = new DefaultDataBufferFactory().wrap(Files.readAllBytes(path));
 
-        // When
-        Mono<BlogPostsDTO> updatedBlogPost = blogPostsService.updateBlogPost(savedBlog.getId(), updateBlog, images);
+        // Create a FilePart for the new image
+        FilePart newFilePart = new MockFilePart(path.getFileName().toString(), Flux.just(dataBuffer));
+        Flux<FilePart> images = Flux.just(newFilePart);
 
-        // Then
+        // When: Call updateBlogPost
+        Mono<BlogPostsDTO> updatedBlogPost = blogPostsService.updateBlogPost(savedBlogPost.getId(), updateBlogPost, images)
+                .doOnNext(res -> log.debug("res {}", res));
+//        ReactiveLogger.logMono(updatedBlogPost).subscribe();
+
+        // Then: Verify the updated BlogPostsDTO
         StepVerifier.create(updatedBlogPost)
                 .assertNext(post -> {
-                    assertEquals(savedBlog.getId(), post.getId());
+                    assertEquals(savedBlogPost.getId(), post.getId());
                     assertEquals("Updated Title", post.getTitle());
                     assertEquals("Updated Content", post.getContent());
                     assertNotNull(post.getImages());
                     assertEquals(1, post.getImages().size());
-                    assertEquals("new-image.jpg", post.getImages().get(0).getImageKey());
+                    assertEquals("test-image.jpg", post.getImages().get(0).getImageKey().split("_")[1]);
                 })
                 .verifyComplete();
 
-        // Verify interactions with mocks
-        Mockito.verify(s3Service).deleteRickCloudyBlogImage("existing-image.jpg");
-        Mockito.verify(imagesRepository).delete(existingImage);
-        Mockito.verify(imagesRepository, Mockito.times(1)).save(Mockito.any(BlogImages.class));
+        // Additional verification: Check the repository state
+        StepVerifier.create(imagesRepository.findByBlogPostId(savedBlogPost.getId()))
+                .expectNextMatches(image -> image.getImageKey().split("_")[1].equals("test-image.jpg"))
+                .verifyComplete();
+
+        StepVerifier.create(blogPostsRepository.findById(savedBlogPost.getId()))
+                .expectNextMatches(blog -> blog.getTitle().equals("Updated Title") &&
+                        blog.getContent().equals("Updated Content"))
+                .verifyComplete();
+    }
+
+    @Test
+    void testMockFilePart() {
+        FilePart filePartMock = Mockito.mock(FilePart.class);
+        Mockito.when(filePartMock.filename()).thenReturn("test-file.jpg");
+
+        assertEquals("test-file.jpg", filePartMock.filename());
     }
 
     /*@Test

@@ -45,6 +45,8 @@ public class S3Service {
                     log.debug("Trying to delete image from something");
                     return s3Client.deleteObject(builder -> builder.bucket(bucketName).key(key));
                 })
+                .doOnNext(res -> log.info("Image deleted successfully: {}", key))
+                .doOnError(err -> log.error("Error deleting image: {}", err.getMessage()))
                 .then();
     }
     public Flux<UploadResult> uploadBlogImages(Flux<FilePart> filePartFlux) {

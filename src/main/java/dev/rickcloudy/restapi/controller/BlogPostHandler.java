@@ -30,7 +30,7 @@ import java.util.Map;
 public class BlogPostHandler implements Handler {
 
     private final BlogPostsService blogPostService;
-    private final Logger log = LogManager.getLogger(BlogPostHandler.class);
+    private static final Logger log = LogManager.getLogger(BlogPostHandler.class);
 
 
     @Override
