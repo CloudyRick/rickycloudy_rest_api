@@ -19,11 +19,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.Errors;
+import org.springframework.validation.Validator;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static net.sf.jsqlparser.util.validation.metadata.NamedObject.user;
 
 @Service
 @RequiredArgsConstructor
@@ -34,29 +39,44 @@ public class BlogPostsService {
     private final BlogImagesRepository imagesRepository;
     private final BlogPostMapper mapper;
     private final S3Service s3Service;
+    private final Validator validator;
 
     @Transactional
-    public Mono<BlogPostsDTO> createBlogPost(BlogPosts blogPost, Flux<FilePart> images) {
-        List<String> imageKey = new ArrayList<>();
+    public Mono<BlogPostsDTO> createBlogPost(BlogPosts blogPost, Flux<String> imagesUrl) {
+        // Set up the Errors object
+        Errors errors = new BeanPropertyBindingResult(blogPost, "blogPost");
+
+        // Validate the entity
+        validator.validate(blogPost, errors);
+
+        // Check if there are any validation errors
+        if (errors.hasErrors()) {
+            StringBuilder errorMessage = new StringBuilder("Validation failed: ");
+            errors.getAllErrors().forEach(error -> errorMessage.append(error.getDefaultMessage()).append(" "));
+            return Mono.error(new HttpException(HttpStatus.BAD_REQUEST, errorMessage.toString()));
+        }
         return userRepository.findById(blogPost.getAuthorId())
                 .switchIfEmpty(Mono.error(new UserNotFoundException(HttpStatus.NOT_FOUND, "User Not Found")))
                 .flatMap(user -> blogPostsRepository.save(blogPost))
                 .flatMap(savedBlogPost -> {
-                            return saveImage(images, savedBlogPost.getId())
-                                    .doOnNext(res -> {
-                                        imageKey.add(res.getImageKey());
-                                        log.debug("Key {}", imageKey);
-                                    })
-                                    .collectList()
-                                    .map(savedImages -> {
-                                        BlogPostsDTO dto = mapper.blogPostsToBlogPostsDTO(savedBlogPost);
-                                        dto.setImages(savedImages);
-                                        return dto;
-                                    });
-                        })
+                    return imagesUrl.flatMap(url -> {
+                                log.debug("IMAGE URL {}", url);
+                                return imagesRepository.findByUrl(url);
+                            })
+                            .flatMap(blogImage -> {
+                                blogImage.setBlogPostId(savedBlogPost.getId());
+                                return imagesRepository.save(blogImage);
+                            })
+                            .collectList()
+                            .flatMap(images -> {
+                                BlogPostsDTO dto = mapper.blogPostsToBlogPostsDTO(savedBlogPost);
+                                dto.setImages(images);
+                                return Mono.just(dto);
+                            });
+                })
                         .doOnError(err -> {
                             // Delete the uploaded images if an error occurs
-                            imageKey.forEach(s3Service::deleteRickCloudyBlogImage);
+                            log.error("Error saving blog post: {}", err);
                         });
     }
 

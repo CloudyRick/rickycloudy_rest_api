@@ -1,7 +1,9 @@
 package dev.rickcloudy.restapi.service;
 
 import dev.rickcloudy.restapi.dto.UploadResult;
+import dev.rickcloudy.restapi.entity.BlogImages;
 import dev.rickcloudy.restapi.exception.custom.FileUploadException;
+import dev.rickcloudy.restapi.repository.BlogImagesRepository;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -28,6 +30,7 @@ public class S3Service {
     private final S3AsyncClient s3Client;
     @Value("${rickcloudy.blog.blogImagesBucket}")
     private String bucketName;
+    private final BlogImagesRepository blogImagesRepository;
 
     private Mono<UploadResult> uploadRickCloudyBlogImage(String key, ByteBuffer fileData) {
         return Mono.fromFuture(() -> s3Client.putObject(
@@ -63,7 +66,15 @@ public class S3Service {
                         ByteBuffer combined = ByteBuffer.allocate(list.stream().mapToInt(ByteBuffer::remaining).sum());
                         list.forEach(combined::put);
                         String uniqueKey = UUID.randomUUID().toString() + "_" + filePart.filename();
-                        return uploadRickCloudyBlogImage(uniqueKey, combined);
+                        BlogImages image = BlogImages.builder()
+                                .imageKey(uniqueKey).build();
+                        return uploadRickCloudyBlogImage(uniqueKey, combined)
+                                .flatMap(res -> {
+                                    log.debug("S3333333 {}", res.getUrl());
+                                    image.setImageUrl(res.getUrl());
+                                    return blogImagesRepository.save(image)
+                                            .flatMap(img -> Mono.just(res));
+                                });
                     });
         })
                 .doOnNext(res -> log.info("File uploaded successfully: {}", res.getUrl()))

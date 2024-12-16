@@ -1,5 +1,6 @@
 package dev.rickcloudy.restapi.config;
 
+import dev.rickcloudy.restapi.controller.AuthHandler;
 import dev.rickcloudy.restapi.controller.BlogPostHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,11 +28,19 @@ public class RouterConfig {
 	@Bean
 	public RouterFunction<ServerResponse> blogRoutes(BlogPostHandler handler) {
 		return route().POST("/blogs", handler::save)
+				.POST("/blogs/images", handler::uploadBlogImage)
 //				.GET() // Get By Id
 //				.PUT()
 //				.DELETE()
 //				.GET() // Get All
 //				.GET() // Search
+				.build();
+	}
+
+	@Bean
+	public RouterFunction<ServerResponse> authRoutes(AuthHandler handler) {
+		return route()
+				.POST("/auth/login", handler::login)
 				.build();
 	}
 	/*@Bean

@@ -10,4 +10,5 @@ public interface CustomBlogImageRepository {
     Mono<Void> deleteByBlogPostId(Long blogPostId);
     Flux<BlogImages> findByBlogPostId(Long blogPostId);
     Flux<BlogImages> findAllByImageKeys(Set<String> imageKeys);
+    Mono<BlogImages> findByUrl(String url);
 }

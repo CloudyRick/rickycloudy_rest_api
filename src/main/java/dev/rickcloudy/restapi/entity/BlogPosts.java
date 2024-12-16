@@ -2,6 +2,7 @@ package dev.rickcloudy.restapi.entity;
 
 import dev.rickcloudy.restapi.enums.BlogStatus;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,7 +28,7 @@ public class BlogPosts {
     private String title;
     @NotBlank(message = "Content must not be blank")
     private String content;
-    @NotBlank(message = "Author must not be blank")
+    @NotNull(message = "Author must not be blank")
     private Long authorId;
     private BlogStatus status;
     private ZonedDateTime createdAt;

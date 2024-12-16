@@ -23,6 +23,12 @@ aws:
 rickcloudy:
   blog:
       blogImagesBucket: ${BLOG_IMAGES_BUCKET}
+  token:
+      accessTokenSecret: ${ACCESS_TOKEN_SECRET}
+      refreshTokenSecret: ${REFRESH_TOKEN_SECRET}
+      accessTokenExpirationMs: ${ACCESS_TOKEN_EXPIRATION_MS}
+      refreshTokenExpirationMs: ${REFRESH_TOKEN_EXPIRATION_MS}
+
 logging:
   level:
     org:

@@ -11,6 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import dev.rickcloudy.restapi.dto.UserDTO;
@@ -33,6 +34,7 @@ public class UserService {
 	private final UserRepository userRepository;
 	private final UserMapper mapper;
 	private final Validator validator;
+	private final PasswordEncoder passwordEncoder;
 
 	public Mono<UserDTO> save(Users user) {
 	// Set up the Errors object
@@ -47,6 +49,8 @@ public class UserService {
 			errors.getAllErrors().forEach(error -> errorMessage.append(error.getDefaultMessage()).append(" "));
 			return Mono.error(new HttpException(HttpStatus.BAD_REQUEST, errorMessage.toString()));
 		}
+
+		user.setPassword(passwordEncoder.encode(user.getPassword()));
 
 		return userRepository.existsByEmail(user.getEmail())
 				.flatMap(exists -> {

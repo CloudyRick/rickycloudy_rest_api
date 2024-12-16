@@ -248,14 +248,6 @@ class BlogPostsServiceTest {
     }
 
     @Test
-    void testMockFilePart() {
-        FilePart filePartMock = Mockito.mock(FilePart.class);
-        Mockito.when(filePartMock.filename()).thenReturn("test-file.jpg");
-
-        assertEquals("test-file.jpg", filePartMock.filename());
-    }
-
-    /*@Test
     void updateBlogPost_Given_MismatchedIds_When_UpdateBlogPost_Expect_Exception() {
         // save a BlogPosts object to the database
         BlogPosts saveBlog = BlogPosts.builder()
@@ -275,15 +267,16 @@ class BlogPostsServiceTest {
                 .build();
 
         // When updateBlogPost is called
-        Mono<BlogPosts> updatedBlogPost = ReactiveLogger.logMono(blogPostsService.updateBlogPost(saveBlog.getId(), blogPost));
+        Mono<BlogPostsDTO> result = blogPostsService.updateBlogPost(savedBlog.getId(), blogPost, Flux.empty());
 
         // Then an exception should be thrown
-        StepVerifier.create(updatedBlogPost)
-                .expectErrorMatches(throwable -> throwable instanceof HttpException)
+        StepVerifier.create(result)
+                .expectErrorMatches(throwable -> throwable instanceof HttpException &&
+                        throwable.getMessage().contains("ID Does Not Match"))
                 .verify();
-    }*/
+    }
 
-    /*@Test
+    @Test
     void updateBlogPost_Given_MismatchedAuthorIds_When_UpdateBlogPost_Expect_Exception() {
         // save a BlogPosts object to the database
         BlogPosts saveBlog = BlogPosts.builder()
@@ -303,15 +296,16 @@ class BlogPostsServiceTest {
                 .build();
 
         // When updateBlogPost is called
-        Mono<BlogPosts> updatedBlogPost = ReactiveLogger.logMono(blogPostsService.updateBlogPost(savedBlog.getId(), blogPost));
+        Mono<BlogPostsDTO> result = blogPostsService.updateBlogPost(savedBlog.getId(), blogPost, Flux.empty());
 
         // Then an exception should be thrown
-        StepVerifier.create(updatedBlogPost)
-                .expectErrorMatches(throwable -> throwable instanceof HttpException)
+        StepVerifier.create(result)
+                .expectErrorMatches(throwable -> throwable instanceof HttpException &&
+                        throwable.getMessage().contains("Author ID Does Not Match"))
                 .verify();
-    }*/
+    }
 
-    /*@Test
+    @Test
     void updateBlogPost_Given_NonExistingBlogPost_When_UpdateBlogPost_Expect_Exception() {
         // save a BlogPosts object to the database
         BlogPosts saveBlog = BlogPosts.builder()
@@ -331,14 +325,15 @@ class BlogPostsServiceTest {
                 .build();
 
         // When updateBlogPost is called
-        Mono<BlogPosts> updatedBlogPost = ReactiveLogger.logMono(blogPostsService.updateBlogPost(12121212L, blogPost));
+        Mono<BlogPostsDTO> updatedBlogPost = ReactiveLogger.logMono(blogPostsService.updateBlogPost(12121212L, blogPost,
+         Flux.empty()       ));
 
         // Then an exception should be thrown
         StepVerifier.create(updatedBlogPost)
                 .expectErrorMatches(throwable -> throwable instanceof BlogPostNotFoundException)
                 .verify();
     }
-*/
+
     @Test
     void deleteBlogPost_Given_ExistingBlogPost_When_DeleteBlogPost_Expect_BlogPostDeleted() {
         // Given an existing BlogPosts object

@@ -3,6 +3,8 @@ package dev.rickcloudy.restapi.repository.impl;
 import dev.rickcloudy.restapi.entity.BlogImages;
 import dev.rickcloudy.restapi.repository.CustomBlogImageRepository;
 import lombok.RequiredArgsConstructor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.data.r2dbc.core.R2dbcEntityTemplate;
 import org.springframework.data.relational.core.query.Criteria;
 import org.springframework.data.relational.core.query.Query;
@@ -18,6 +20,7 @@ import static org.springframework.data.relational.core.query.Criteria.where;
 @RequiredArgsConstructor
 public class CustomBlogImageRepositoryImpl implements CustomBlogImageRepository {
     private final R2dbcEntityTemplate template;
+    private Logger log = LogManager.getLogger(CustomBlogImageRepositoryImpl.class);
     @Override
     public Mono<Void> deleteByBlogPostId(Long blogPostId) {
         return template.delete(BlogImages.class)
@@ -45,5 +48,13 @@ public class CustomBlogImageRepositoryImpl implements CustomBlogImageRepository 
         return template.select(Query.query(
                 Criteria.where("image_key").in(imageKeys)
         ), BlogImages.class);
+    }
+
+    @Override
+    public Mono<BlogImages> findByUrl(String url) {
+        return template.selectOne(Query.query(
+                Criteria.where("image_url").is(url)
+        ), BlogImages.class)
+                .doOnSuccess(res -> log.debug("Found image: {}", res));
     }
 }

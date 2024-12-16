@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS blog_posts (
 
 CREATE TABLE IF NOT EXISTS blog_images (
                                            id BIGINT AUTO_INCREMENT PRIMARY KEY, -- V1_1_2
-                                           blog_post_id BIGINT NOT NULL, -- V1_1_5 (modified from blog_id in V1_1_2)
+                                           blog_post_id BIGINT, -- V1_1_5 (modified from blog_id in V1_1_2)
                                            image_url VARCHAR(255) NOT NULL, -- V1_1_2
     `alt` VARCHAR(255), -- V1_1_2
     `caption` VARCHAR(255), -- V1_1_2
