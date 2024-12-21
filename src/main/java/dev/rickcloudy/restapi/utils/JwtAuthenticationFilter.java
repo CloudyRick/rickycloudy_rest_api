@@ -25,8 +25,10 @@ public class JwtAuthenticationFilter implements WebFilter {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+
         log.debug("JwtAuthFilter::filter::reached ");
         String authorizationHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+//        exchange.getResponse().getHeaders().add("Access-Control-Allow-Origin", "http://localhost:5173");
 
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
             return chain.filter(exchange);
@@ -38,7 +40,6 @@ public class JwtAuthenticationFilter implements WebFilter {
                 String username = jwtUtils.extractUsernameFromAccessToken(token);
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(username, null, null);
-
                 SecurityContext securityContext = new SecurityContextImpl(authentication);
                 return chain.filter(exchange)
                         .contextWrite(ReactiveSecurityContextHolder.withSecurityContext(Mono.just(securityContext)));

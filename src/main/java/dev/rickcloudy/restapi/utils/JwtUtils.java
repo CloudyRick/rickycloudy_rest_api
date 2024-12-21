@@ -3,6 +3,8 @@ package dev.rickcloudy.restapi.utils;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -22,6 +24,7 @@ public class JwtUtils {
     private long accessTokenExpirationMs;
     @Value("${REFRESH_TOKEN_EXPIRATION_MS}")
     private long refreshTokenExpirationMs;
+    private static Logger log = LogManager.getLogger(JwtUtils.class);
 
     private Key getKeyFromSecret(String secret) {
         return Keys.hmacShaKeyFor(secret.getBytes());
@@ -52,6 +55,7 @@ public class JwtUtils {
     }
 
     public boolean validateRefreshToken(String token) {
+        log.debug("JwtUtils::validateRefreshToken::reached ");
         return validateToken(token, getKeyFromSecret(refreshTokenSecret));
     }
 

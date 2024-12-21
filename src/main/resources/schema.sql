@@ -1,7 +1,5 @@
 CREATE DATABASE IF NOT EXISTS rickcloudy_dev;
 
-CREATE DATABASE IF NOT EXISTS rickcloudy_dev;
-
 CREATE TABLE IF NOT EXISTS users (
                                      id BIGINT AUTO_INCREMENT PRIMARY KEY, -- Initial schema
                                      first_name VARCHAR(100) NOT NULL, -- Initial schema
