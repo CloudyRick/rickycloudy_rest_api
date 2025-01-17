@@ -1,9 +1,9 @@
 server:
-  port: 8088
+  port: ${SERVER_PORT}
 
 spring:
-  config:
-    import: optional:file:.env[.properties]
+#  config:
+#    import: optional:file:.env[.properties]
   r2dbc:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -31,6 +31,8 @@ rickcloudy:
 
 logging:
   level:
+    io:
+      r2dbc: DEBUG
     org:
       springframework:
         r2dbc: DEBUG

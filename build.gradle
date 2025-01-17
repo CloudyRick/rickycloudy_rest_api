@@ -86,3 +86,8 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+bootJar {
+    mainClass = 'dev.rickcloudy.restapi.RestApiApplication'
+    archiveFileName = 'rickcloudy-api.jar'
+}

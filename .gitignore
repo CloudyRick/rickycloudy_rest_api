@@ -37,3 +37,4 @@ toughday**
 ### VS Code ###
 .vscode/
 /logs/
+restart-container.sh
