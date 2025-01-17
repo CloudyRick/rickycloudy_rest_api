@@ -6,6 +6,8 @@ import dev.rickcloudy.restapi.exception.custom.UserNotFoundException;
 import dev.rickcloudy.restapi.repository.UserRepository;
 import dev.rickcloudy.restapi.utils.JwtUtils;
 import lombok.RequiredArgsConstructor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,6 +20,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
+    private static Logger log = LogManager.getLogger(AuthService.class);
 
     public Mono<AuthResponse> login(String username, String password) {
         return userRepository.findByUsername(username)

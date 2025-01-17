@@ -39,7 +39,7 @@ public class SecurityConfig {
                         .pathMatchers("/users").authenticated()
                         .anyExchange().authenticated() // Secure all other endpoints
                 )// Add the JWT filter
-                .addFilterAt(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION)
+                .addFilterBefore(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION)
                 .build();
     }
 }

@@ -52,6 +52,7 @@ public class JwtUtils {
     }
 
     public boolean validateRefreshToken(String token) {
+        log.debug("JwtUtils::validateRefreshToken::reached ");
         return validateToken(token, getKeyFromSecret(refreshTokenSecret));
     }
 
