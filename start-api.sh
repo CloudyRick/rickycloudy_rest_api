@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 # Function to check if a command exists
 command_exists() {
   command -v "$1" >/dev/null 2>&1
@@ -21,6 +20,7 @@ fi
 # Set AWS Secret and Region
 SECRET_NAME="prod/RickCloudy/API"
 REGION="ap-southeast-2"
+DOCKER_NETWORK="rickcloudy-app"
 
 # Fetch the secret value from AWS Secrets Manager
 SECRET_VALUE=$(aws secretsmanager get-secret-value --secret-id "$SECRET_NAME" --region "$REGION" --query 'SecretString' --output text 2>/dev/null)
@@ -86,8 +86,9 @@ fi
 
 # Step 4: Run the Docker container
 echo "Starting the Docker container..."
-docker run --network restapi_mynetwork -d -p $SERVER_PORT:$SERVER_PORT --name $DOCKER_CONTAINER_NAME \
+docker run --network $DOCKER_NETWORK -d -p $SERVER_PORT:$SERVER_PORT --name $DOCKER_CONTAINER_NAME \
                                                                               -e JAVA_OPTS="-Djava.management.disabled=true" \
+                                                                              -e SERVER_PORT=$SERVER_PORT \
                                                                               -e DB_URL=$DB_URL \
                                                                               -e DB_USERNAME=$DB_USERNAME \
                                                                               -e DB_PASSWORD=$DB_PASSWORD \
