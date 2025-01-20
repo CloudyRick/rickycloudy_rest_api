@@ -5,8 +5,9 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: rickcloudy_db
-      MYSQL_USER: app
-      MYSQL_PASSWORD: M4k1n5u54h!
+      MYSQL_USER: dev
+      MYSQL_PASSWORD: randompassword!
+      TZ: UTC
     ports:
       - "3309:3306"
     volumes:

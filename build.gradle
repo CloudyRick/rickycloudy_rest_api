@@ -54,6 +54,7 @@ dependencies {
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.15.2'
     implementation group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.15.2'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2'
+    implementation 'mysql:mysql-connector-java:8.0.23'
     implementation platform('org.testcontainers:testcontainers-bom:1.19.7')
 
     // MapStruct dependencies

@@ -4,6 +4,8 @@ server:
 spring:
 #  config:
 #    import: optional:file:.env[.properties]
+  webflux:
+    base-path: /api
   r2dbc:
     url: ${DB_URL}
     username: ${DB_USERNAME}
