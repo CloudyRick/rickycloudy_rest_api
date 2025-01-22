@@ -35,7 +35,7 @@ public class SecurityConfig {
                 .csrf(ServerHttpSecurity.CsrfSpec::disable) // Disable CSRF for stateless APIs
                 .authorizeExchange(exchange -> exchange
                         .pathMatchers("/auth/login", "/auth/refresh-token").permitAll()
-                        .pathMatchers(HttpMethod.POST, "/users").permitAll() // Allow public access
+//                        .pathMatchers(HttpMethod.POST, "/users").permitAll() // Allow public access
                         .pathMatchers("/users").authenticated()
                         .anyExchange().authenticated() // Secure all other endpoints
                 )// Add the JWT filter
