@@ -46,7 +46,6 @@ public class RouterConfig {
 	}
 
 	@Bean
-	@CrossOrigin(origins = "http://localhost:5173")
 	public RouterFunction<ServerResponse> authRoutes(AuthHandler handler) {
 		return route()
 				.POST("/auth/login", handler::login)
@@ -57,6 +56,7 @@ public class RouterConfig {
 	@Bean
 	public CorsWebFilter corsWebFilter() {
 		CorsConfiguration corsConfig = new CorsConfiguration();
+		corsConfig.addAllowedOrigin("https://rickcloudy.com");
 		corsConfig.addAllowedOrigin("http://localhost:5173"); // Add your frontend's URL
 		corsConfig.addAllowedMethod("*"); // Allow all HTTP methods
 		corsConfig.addAllowedHeader("*"); // Allow all headers
