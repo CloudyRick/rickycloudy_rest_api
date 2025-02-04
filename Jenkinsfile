@@ -133,7 +133,7 @@ pipeline {
                                 git add app_version.txt
                                 git commit -m "Update app_version.txt [skip ci]"
                                 git pull origin main
-                                git push https://$GIT_USERNAME:$GIT_PASSWORD@github.com/CloudyRick/rickcloudy_front_end.git main
+                                git push https://$GIT_USERNAME:$GIT_PASSWORD@github.com/CloudyRick/rickcloudy_rest_api.git main
                             '''
                         }
                     }
