@@ -1,5 +1,6 @@
 #!/bin/bash
 set -x
+
 # Function to check if a command exists
 command_exists() {
   command -v "$1" >/dev/null 2>&1
@@ -22,6 +23,9 @@ fi
 SECRET_NAME="dev/RickCloudy/API"
 REGION="ap-southeast-2"
 DOCKER_NETWORK="rickcloudy-app"
+JAR_NAME="rickcloudy-api.jar"
+DOCKER_IMAGE_NAME="rickcloudy-api-prod"
+DOCKER_CONTAINER_NAME="rickcloudy-api-prod"
 
 # Fetch the secret value from AWS Secrets Manager
 SECRET_VALUE=$(aws secretsmanager get-secret-value --secret-id "$SECRET_NAME" --region "$REGION" --query 'SecretString' --output text 2>/dev/null)
@@ -49,14 +53,9 @@ export ACCESS_TOKEN_EXPIRATION_MS=$(echo $SECRET_VALUE | jq -r .ACCESS_TOKEN_EXP
 export REFRESH_TOKEN_EXPIRATION_MS=$(echo $SECRET_VALUE | jq -r .REFRESH_TOKEN_EXPIRATION_MS)
 
 
-# Set variables
-JAR_NAME="rickcloudy-api.jar"  # Replace with your desired JAR file name
-DOCKER_IMAGE_NAME="rickcloudy-api-prod"  # Replace with your Docker image name
-DOCKER_CONTAINER_NAME="rickcloudy-api-prod"  # Replace with your Docker container name
-
 # Step 1: Build the JAR file using Gradle
 echo "Building the JAR file using Gradle..."
-./gradlew bootJar
+./gradlew clean bootJar
 
 # Check if the JAR build was successful
 if [ $? -ne 0 ]; then
@@ -88,6 +87,7 @@ fi
 # Step 4: Run the Docker container
 echo "Starting the Docker container..."
 docker run --network $DOCKER_NETWORK -d -p $SERVER_PORT:$SERVER_PORT --name $DOCKER_CONTAINER_NAME \
+                                                                              -e SPRING_PROFILES_ACTIVE=dev \
                                                                               -e JAVA_OPTS="-Djava.management.disabled=true" \
                                                                               -e SERVER_PORT=$SERVER_PORT \
                                                                               -e DB_URL=$DB_URL \

@@ -1,0 +1,40 @@
+server:
+  port: ${SERVER_PORT}
+
+spring:
+  webflux:
+    base-path: /api
+  r2dbc:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    database: ${DB_NAME}
+  flyway:
+    locations: classpath:db/migration
+    enabled: true
+    url: ${FLYWAY_URL}
+    user: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    baseline-on-migrate: true
+aws:
+  accessKeyId: ${AWS_ACCESS_KEY_ID}
+  secretKey: ${AWS_SECRET_ACCESS_KEY}
+  region: ${AWS_REGION}
+rickcloudy:
+  blog:
+    blogImagesBucket: ${BLOG_IMAGES_BUCKET}
+  token:
+    accessTokenSecret: ${ACCESS_TOKEN_SECRET}
+    refreshTokenSecret: ${REFRESH_TOKEN_SECRET}
+    accessTokenExpirationMs: ${ACCESS_TOKEN_EXPIRATION_MS}
+    refreshTokenExpirationMs: ${REFRESH_TOKEN_EXPIRATION_MS}
+
+logging:
+  level:
+    io:
+      r2dbc: DEBUG
+    org:
+      springframework:
+        r2dbc: DEBUG
+      testcontainers: DEBUG
+    reactor: DEBUG

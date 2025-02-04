@@ -21,6 +21,8 @@ fi
 SECRET_NAME="prod/RickCloudy/API"
 REGION="ap-southeast-2"
 DOCKER_NETWORK="rickcloudy-app"
+DOCKER_IMAGE_NAME="637423465400.dkr.ecr.ap-southeast-2.amazonaws.com/rickcloudy-api:latest"  # Replace with your Docker image name
+DOCKER_CONTAINER_NAME="rickcloudy-api-prod"  # Replace with your Docker container name
 
 # Fetch the secret value from AWS Secrets Manager
 SECRET_VALUE=$(aws secretsmanager get-secret-value --secret-id "$SECRET_NAME" --region "$REGION" --query 'SecretString' --output text 2>/dev/null)
@@ -47,36 +49,6 @@ export REFRESH_TOKEN_SECRET=$(echo $SECRET_VALUE | jq -r .REFRESH_TOKEN_SECRET)
 export ACCESS_TOKEN_EXPIRATION_MS=$(echo $SECRET_VALUE | jq -r .ACCESS_TOKEN_EXPIRATION_MS)
 export REFRESH_TOKEN_EXPIRATION_MS=$(echo $SECRET_VALUE | jq -r .REFRESH_TOKEN_EXPIRATION_MS)
 
-
-# Set variables
-JAR_NAME="rickcloudy-api.jar"  # Replace with your desired JAR file name
-DOCKER_IMAGE_NAME="rickcloudy-api-prod"  # Replace with your Docker image name
-DOCKER_CONTAINER_NAME="rickcloudy-api-prod"  # Replace with your Docker container name
-
-# Step 1: Build the JAR file using Gradle
-echo "Building the JAR file using Gradle..."
-./gradlew bootJar
-
-# Check if the JAR build was successful
-if [ $? -ne 0 ]; then
-  echo "Failed to build the JAR file."
-  exit 1
-fi
-
-echo "JAR file built successfully."
-
-# Step 2: Build the Docker image
-echo "Building the Docker image..."
-docker build -t $DOCKER_IMAGE_NAME .
-
-# Check if the Docker image build was successful
-if [ $? -ne 0 ]; then
-  echo "Failed to build the Docker image."
-  exit 1
-fi
-
-echo "Docker image built successfully."
-
 # Step 3: Stop and remove the old container if it exists
 if [ "$(docker ps -aq -f name=$DOCKER_CONTAINER_NAME)" ]; then
   echo "Stopping and removing existing Docker container..."
@@ -87,6 +59,7 @@ fi
 # Step 4: Run the Docker container
 echo "Starting the Docker container..."
 docker run --network $DOCKER_NETWORK -d -p $SERVER_PORT:$SERVER_PORT --name $DOCKER_CONTAINER_NAME \
+                                                                              -e SPRING_PROFILES_ACTIVE=prod \
                                                                               -e JAVA_OPTS="-Djava.management.disabled=true" \
                                                                               -e SERVER_PORT=$SERVER_PORT \
                                                                               -e DB_URL=$DB_URL \

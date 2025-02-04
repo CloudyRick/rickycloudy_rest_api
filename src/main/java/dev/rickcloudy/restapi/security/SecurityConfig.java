@@ -34,6 +34,7 @@ public class SecurityConfig {
                 .authenticationManager(authenticationManager)
                 .csrf(ServerHttpSecurity.CsrfSpec::disable) // Disable CSRF for stateless APIs
                 .authorizeExchange(exchange -> exchange
+                        .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .pathMatchers("/auth/login", "/auth/refresh-token").permitAll()
 //                        .pathMatchers(HttpMethod.POST, "/users").permitAll() // Allow public access
                         .pathMatchers("/users").authenticated()
