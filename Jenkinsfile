@@ -121,6 +121,25 @@ pipeline {
                 }
             }
         }
+        stage('Commit App Version') {
+                steps {
+                    echo 'Build and deployment succeeded!'
+                    script {
+                        withCredentials([usernamePassword(credentialsId: 'github-cred', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
+                            sh '''
+                                git checkout main || git checkout -b main
+                                git config user.name "CloudyRick"
+                                git config user.email "cloudyricky.dev@gmail.com"
+                                git add app_version.txt
+                                git commit -m "Update app_version.txt [skip ci]"
+                                git pull origin main
+                                git push https://$GIT_USERNAME:$GIT_PASSWORD@github.com/CloudyRick/rickcloudy_front_end.git main
+                            '''
+                        }
+                    }
+                }
+
+            }
     }
 
     post {
