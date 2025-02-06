@@ -6,6 +6,8 @@ import dev.rickcloudy.restapi.entity.BlogPosts;
 import dev.rickcloudy.restapi.enums.BlogStatus;
 import dev.rickcloudy.restapi.exception.custom.BlogPostNotFoundException;
 import dev.rickcloudy.restapi.exception.HttpException;
+import dev.rickcloudy.restapi.exception.custom.NotFoundException;
+import dev.rickcloudy.restapi.exception.custom.UnauthorizedException;
 import dev.rickcloudy.restapi.exception.custom.UserNotFoundException;
 import dev.rickcloudy.restapi.helper.ReactiveLogger;
 import dev.rickcloudy.restapi.mapper.BlogPostMapper;
@@ -17,6 +19,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BeanPropertyBindingResult;
@@ -80,6 +84,8 @@ public class BlogPostsService {
                         });
     }
 
+
+
     private Flux<BlogImages> saveImage(Flux<FilePart> image, Long blogPostId) {
         return s3Service.uploadBlogImages(image)
                 .flatMap(res -> {
@@ -94,12 +100,15 @@ public class BlogPostsService {
                 .doOnError(err -> log.error("Error Saving Image: {}", err));
     }
 
-    public Mono<BlogPostsDTO> getBlogPost(Long id) {
+    public Mono<BlogPostsDTO> getBlogPostById(Long id) {
         return blogPostsRepository.findById(id)
                 .switchIfEmpty(Mono.error(new BlogPostNotFoundException(HttpStatus.NOT_FOUND, "Blog Post Not Found")))
                 .flatMap(res -> {
                     if (res.getStatus() == BlogStatus.DELETED) {
                         return Mono.error(new BlogPostNotFoundException(HttpStatus.NOT_FOUND, "Blog Post Not Found"));
+                    }
+                    if(!(res.getStatus() == BlogStatus.PUBLISHED)) {
+                        return Mono.error(new UnauthorizedException("Unathorized to access blog post with id " + id));
                     }
                     return Mono.just(res);
                 })
@@ -112,14 +121,8 @@ public class BlogPostsService {
                 });
     }
 
-    public Flux<BlogPostsDTO> getAllBlogPosts() {
+    public Flux<BlogPostsDTO> getAllBlogPostsAdmin() {
         return blogPostsRepository.findAll()
-                .flatMap(blogPost -> {
-                    if (blogPost.getStatus() == BlogStatus.DELETED) {
-                        return Mono.empty();
-                    }
-                    return Mono.just(blogPost);
-                })
                 .flatMap(blogPost -> {
                     BlogPostsDTO blogPostsDTO = mapper.blogPostsToBlogPostsDTO(blogPost);
                     return imagesRepository.findByBlogPostId(blogPost.getId())
@@ -131,10 +134,8 @@ public class BlogPostsService {
 
     @Transactional
     public Mono<BlogPostsDTO> updateBlogPost(Long id, BlogPosts blogPost, Flux<FilePart> images    ) {
-            return this.getBlogPost(id)
-                    .flatMap(blogPostsDTO -> {
-                        return Mono.just(mapper.dtoToBlogPosts(blogPostsDTO));
-                    })
+            return this.getBlogPostById(id)
+                    .flatMap(blogPostsDTO -> Mono.just(mapper.dtoToBlogPosts(blogPostsDTO)))
                 .flatMap(existingBlogPost -> {
                     if (!Objects.equals(id, blogPost.getId())) {
                         return Mono.error(new HttpException(HttpStatus.FORBIDDEN, "ID Does Not Match"));
@@ -226,7 +227,7 @@ public class BlogPostsService {
     }
 
     public Mono<Void> deleteBlogPost(Long id) {
-        return this.getBlogPost(id)
+        return this.getBlogPostById(id)
                 .flatMap(dto -> {
                     return Mono.just(mapper.dtoToBlogPosts(dto));
 
@@ -237,7 +238,26 @@ public class BlogPostsService {
                 });
     }
 
-    public Flux<BlogPosts> findByQueryParam(Map<String, String> param) {
-        return blogPostsRepository.findByParams(param);
+    public Flux<BlogPostsDTO> findByQueryParam(Map<String, String> param) {
+        BlogStatus status = BlogStatus.fromString(param.getOrDefault("status", "PUBLISHED")); // Default to PUBLISHED
+
+        if (status != BlogStatus.PUBLISHED) {
+            return Flux.error(new UnauthorizedException("Authentication required for non-published blogs"));
+        }
+
+        return blogPostsRepository.findByParams(param)
+                .filter(blog -> blog.getStatus() == BlogStatus.PUBLISHED) // Filter while streaming
+                .flatMap(blog -> imagesRepository.findByBlogPostId(blog.getId())
+                        .collectList()
+                        .map(images -> {
+                            BlogPostsDTO dto = mapper.blogPostsToBlogPostsDTO(blog);
+                            dto.setImages(images);
+                            return dto;
+                        })
+                        .doOnSuccess(res -> log.debug("Result : {} ", res))
+                )
+                .switchIfEmpty(Mono.error(new NotFoundException("No published blog posts found")));
     }
+
+
 }

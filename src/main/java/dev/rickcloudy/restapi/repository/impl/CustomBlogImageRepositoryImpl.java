@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Set;
 
 import static org.springframework.data.relational.core.query.Criteria.where;
@@ -52,9 +54,20 @@ public class CustomBlogImageRepositoryImpl implements CustomBlogImageRepository 
 
     @Override
     public Mono<BlogImages> findByUrl(String url) {
-        return template.selectOne(Query.query(
-                Criteria.where("image_url").is(url)
-        ), BlogImages.class)
+        String cleanedUrl = url;
+
+        // If the URL starts with [", remove the first two characters and the last two characters.
+        if (cleanedUrl.startsWith("[\"") && cleanedUrl.endsWith("\"]")) {
+            cleanedUrl = cleanedUrl.substring(2, cleanedUrl.length() - 2);
+        } else {
+            // Otherwise, remove any stray " characters.
+            cleanedUrl = cleanedUrl.replace("\"", "");
+        }
+
+        return template.select(BlogImages.class)
+                .from("blog_images")
+                .matching(Query.query(Criteria.where("image_url").is(cleanedUrl)))
+                .one()  // Ensure execution of the query
                 .doOnSuccess(res -> log.debug("Found image: {}", res));
     }
 }

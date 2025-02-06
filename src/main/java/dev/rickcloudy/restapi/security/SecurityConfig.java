@@ -36,6 +36,8 @@ public class SecurityConfig {
                 .authorizeExchange(exchange -> exchange
                         .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .pathMatchers("/auth/login", "/auth/refresh-token").permitAll()
+                                .pathMatchers("/blogs", "/blogs/**").permitAll()
+                                .pathMatchers("/admin/**").authenticated()
 //                        .pathMatchers(HttpMethod.POST, "/users").permitAll() // Allow public access
                         .pathMatchers("/users").authenticated()
                         .anyExchange().authenticated() // Secure all other endpoints

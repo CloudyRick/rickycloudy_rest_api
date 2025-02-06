@@ -65,7 +65,7 @@ public class S3Service {
                     .flatMap(list -> {
                         ByteBuffer combined = ByteBuffer.allocate(list.stream().mapToInt(ByteBuffer::remaining).sum());
                         list.forEach(combined::put);
-                        String uniqueKey = UUID.randomUUID().toString() + "_" + filePart.filename();
+                        String uniqueKey = UUID.randomUUID().toString();
                         BlogImages image = BlogImages.builder()
                                 .imageKey(uniqueKey).build();
                         return uploadRickCloudyBlogImage(uniqueKey, combined)

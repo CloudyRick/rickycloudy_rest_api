@@ -87,7 +87,7 @@ fi
 # Step 4: Run the Docker container
 echo "Starting the Docker container..."
 docker run --network $DOCKER_NETWORK -d -p $SERVER_PORT:$SERVER_PORT --name $DOCKER_CONTAINER_NAME \
-                                                                              -e SPRING_PROFILES_ACTIVE=dev \
+                                                                              -e SPRING_PROFILES_ACTIVE=prod \
                                                                               -e JAVA_OPTS="-Djava.management.disabled=true" \
                                                                               -e SERVER_PORT=$SERVER_PORT \
                                                                               -e DB_URL=$DB_URL \

@@ -37,7 +37,9 @@ public class RouterConfig {
 	public RouterFunction<ServerResponse> blogRoutes(BlogPostHandler handler) {
 		return route().POST("/blogs", handler::save)
 				.POST("/blogs/images", handler::uploadBlogImage)
-//				.GET() // Get By Id
+				.GET("/blogs/{id}", handler::findById) // Get By Id
+				.GET("/blogs", handler::findByParams)
+				.GET("/admin/blogs", handler::findAllAdmin)
 //				.PUT()
 //				.DELETE()
 //				.GET() // Get All

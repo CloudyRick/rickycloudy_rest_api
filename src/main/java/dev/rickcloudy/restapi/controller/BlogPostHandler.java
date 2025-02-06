@@ -2,6 +2,7 @@ package dev.rickcloudy.restapi.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.rickcloudy.restapi.dto.BlogPostsDTO;
 import dev.rickcloudy.restapi.dto.ResponseDTO;
 import dev.rickcloudy.restapi.entity.BlogPosts;
 import dev.rickcloudy.restapi.exception.custom.InvalidJsonException;
@@ -27,6 +28,7 @@ import reactor.core.publisher.Mono;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 
 @Component
@@ -94,7 +96,9 @@ public class BlogPostHandler implements Handler {
 
     @Override
     public Mono<ServerResponse> findById(ServerRequest request) {
-        return null;
+        return blogPostService.getBlogPostById(Long.parseLong(request.pathVariable("id")))
+                .flatMap(blogPost -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+                        .body(Mono.just(ResponseDTO.success(blogPost, "Blog post found")), BlogPostsDTO.class));
     }
 
     @Override
@@ -112,9 +116,30 @@ public class BlogPostHandler implements Handler {
         return null;
     }
 
+    public Mono<ServerResponse> findAllAdmin(ServerRequest request) {
+        return blogPostService.getAllBlogPostsAdmin()
+                .collectList() // Convert Flux<BlogPostsDTO> to Mono<List<BlogPostsDTO>>
+                .flatMap(res -> ServerResponse.ok().body(Mono.just(ResponseDTO.success(res, "All blog posts retrieved")),
+                        ResponseDTO.class));
+    }
+
     @Override
     public Mono<ServerResponse> findByParams(ServerRequest request) {
-        return null;
+        // Extract query parameters from the request
+        Map<String, String> params = request.queryParams()
+                .entrySet()
+                .stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().get(0))); // Convert MultiValueMap to Map
+
+        // Call the service to handle the query parameters
+        return blogPostService.findByQueryParam(params)
+                .collectList()  // Collect results into a list
+                .flatMap(posts -> {
+                    return ServerResponse.ok()
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(Mono.just(ResponseDTO.success(posts, "Blog posts retrieved")), ResponseDTO.class);  // Return
+                    // 200 OK with the posts
+                });
     }
 
     public Mono<ServerResponse> uploadBlogImage(ServerRequest request) {

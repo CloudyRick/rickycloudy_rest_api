@@ -1,6 +1,7 @@
 package dev.rickcloudy.restapi.repository.impl;
 
 import dev.rickcloudy.restapi.entity.BlogPosts;
+import dev.rickcloudy.restapi.enums.BlogStatus;
 import dev.rickcloudy.restapi.exception.HttpException;
 import dev.rickcloudy.restapi.repository.CustomBlogRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,11 +34,27 @@ public class CustomBlogRepositoryImpl implements CustomBlogRepository {
                 .toList();
 
         for (Map.Entry<String, String> entry : params.entrySet()) {
+            String key = camelCaseToSnakeCase(entry.getKey());
+            String value = entry.getValue().trim();
+
             // Check if the key is a valid field name
             if (!fieldNames.contains(entry.getKey())) {
                 return Flux.error(new HttpException(HttpStatus.BAD_REQUEST, "Invalid parameter name: " + entry.getKey()));
             }
-            criteria = criteria.and(camelCaseToSnakeCase(entry.getKey())).like(entry.getValue() + "%");
+
+            // Special handling for status field (avoid wrapping enums in %)
+            if ("status".equalsIgnoreCase(entry.getKey())) {
+                try {
+                    BlogStatus status = BlogStatus.valueOf(value.toUpperCase()); // Convert directly
+                    criteria = criteria.and(key).is(status);
+                } catch (IllegalArgumentException e) {
+                    return Flux.error(new HttpException(HttpStatus.BAD_REQUEST, "Invalid blog status: " + value));
+                }
+            } else {
+                // Use LIKE query for non-enum fields
+                criteria = criteria.and(key).like("%" + value + "%");
+            }
+
             log.info("criteria: " + criteria.toString());
         }
 
