@@ -29,6 +29,7 @@ import org.springframework.validation.Validator;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -133,30 +134,32 @@ public class BlogPostsService {
     }
 
     @Transactional
-    public Mono<BlogPostsDTO> updateBlogPost(Long id, BlogPosts blogPost, Flux<FilePart> images    ) {
-            return this.getBlogPostById(id)
-                    .flatMap(blogPostsDTO -> Mono.just(mapper.dtoToBlogPosts(blogPostsDTO)))
+    public Mono<BlogPostsDTO> updateBlogPost(Long id, BlogPosts blogPost, Flux<String> imageUrls) {
+        return this.getBlogPostById(id)
+                .flatMap(blogPostsDTO -> Mono.just(mapper.dtoToBlogPosts(blogPostsDTO)))
                 .flatMap(existingBlogPost -> {
                     if (!Objects.equals(id, blogPost.getId())) {
                         return Mono.error(new HttpException(HttpStatus.FORBIDDEN, "ID Does Not Match"));
                     }
-                    if(!Objects.equals(existingBlogPost.getAuthorId(), blogPost.getAuthorId())) {
+                    if (!Objects.equals(existingBlogPost.getAuthorId(), blogPost.getAuthorId())) {
                         return Mono.error(new HttpException(HttpStatus.FORBIDDEN, "Author ID Does Not Match"));
                     }
-                    existingBlogPost.setTitle(blogPost.getTitle());
-                    existingBlogPost.setContent(blogPost.getContent());
-                    // If new images are provided, handle them
-                    if (images != null) {
-                        return this.handleImageChanges(id, images)
-                                .flatMap(updatedImages -> blogPostsRepository.save(existingBlogPost)
+                    blogPost.setCreatedAt(existingBlogPost.getCreatedAt());
+                    blogPost.setUpdatedAt(ZonedDateTime.now());
+                    log.debug("Blog Post {}", blogPost);
+                    // If new image URLs are provided, update the blog post with them
+                    if (imageUrls != null) {
+                        return this.handleImageChanges(id, imageUrls)
+                                .flatMap(updatedImageUrls -> blogPostsRepository.save(blogPost)
                                         .flatMap(savedBlogPost -> {
                                             BlogPostsDTO dto = mapper.blogPostsToBlogPostsDTO(savedBlogPost);
-                                            dto.setImages(updatedImages);
+                                            dto.setImages(updatedImageUrls);
                                             return Mono.just(dto);
-                                        }));
+                                }));
                     }
 
-                    return blogPostsRepository.save(existingBlogPost)
+                    // If no images, just save and return
+                    return blogPostsRepository.save(blogPost)
                             .flatMap(savedBlogPost -> {
                                 BlogPostsDTO dto = mapper.blogPostsToBlogPostsDTO(savedBlogPost);
                                 return Mono.just(dto);
@@ -164,55 +167,69 @@ public class BlogPostsService {
                 });
     }
 
-    private Mono<List<BlogImages>> handleImageChanges(Long blogPostId, Flux<FilePart> images) {
+
+    private Mono<List<BlogImages>> handleImageChanges(Long blogPostId, Flux<String> imageUrls) {
+        // Fetch existing blog post and associated images
         Mono<BlogPostsDTO> existingBlogPostMono = blogPostsRepository.findById(blogPostId)
                 .flatMap(blog -> {
                     BlogPostsDTO dto = mapper.blogPostsToBlogPostsDTO(blog);
                     return imagesRepository.findByBlogPostId(blogPostId)
                             .collectList()
-                            .map(image -> {
-                                dto.setImages(image);
+                            .map(images -> {
+                                dto.setImages(images);
                                 return dto;
                             });
                 });
-        // Find the existing images for the blog post
-        Flux<BlogImages> existingImage = imagesRepository.findByBlogPostId(blogPostId);
 
-        Mono<Set<String>> existingImageKey = existingImage.map(BlogImages::getImageKey)
+        // Retrieve existing images from the database
+        Flux<BlogImages> existingImages = imagesRepository.findByBlogPostId(blogPostId);
+        Mono<Set<String>> existingImageKeys = existingImages
+                .map(BlogImages::getImageKey)
                 .collect(Collectors.toSet());
 
-        // Filter out images that are already saved (i.e., they have existing image keys)
-        Flux<FilePart> newImages = images.filterWhen(image -> existingImageKey
-                .map(keys -> !keys.contains(image.filename())));
+        // Collect new image URLs into a set
+        Mono<Set<String>> newImageKeys = imageUrls.collect(Collectors.toSet());
 
-        // Find the removed images (those that are in the DB but not in the updated form)
-        Mono<Set<String>> newImageKeys = images
-                .map(FilePart::filename) // Get the filenames of new images
-                .collect(Collectors.toSet()); // Collect them into a Set asynchronously
+        // Determine which images need to be added and removed
+        return existingImageKeys.zipWith(newImageKeys).flatMap(tuple -> {
+            Set<String> existingKeys = tuple.getT1(); // Image keys currently in DB
+            Set<String> newKeys = tuple.getT2(); // Image keys provided in the update
 
-        // You need to wait for `existingImageKey` to resolve asynchronously in a non-blocking way
-        return existingImageKey
-                .zipWith(newImageKeys) // Combine both sets (existing and new images)
-                .flatMap(tuple -> {
-                    Set<String> existingKeys = tuple.getT1(); // Extract existing image keys
-                    Set<String> newKeys = tuple.getT2(); // Extract new image keys
+            // Identify images to remove (present in DB but missing from the updated list)
+            Set<String> removedImageKeys = existingKeys.stream()
+                    .filter(key -> !newKeys.contains(key))
+                    .collect(Collectors.toSet());
 
-                    // Find removed image keys (those that are in the DB but not in the new form)
-                    Set<String> removedImageKeys = existingKeys.stream()
-                            .filter(key -> !newKeys.contains(key))
-                            .collect(Collectors.toSet());
+            // Identify new images to add (present in update but not in DB)
+            Set<String> newImagesToAdd = newKeys.stream()
+                    .filter(key -> !existingKeys.contains(key))
+                    .collect(Collectors.toSet());
 
-                    // Delete removed images from the database and the storage
-                    return deleteRemovedImages(removedImageKeys)
-                            .then(saveImage(newImages, blogPostId).collectList()) // Save the new images
-                            .flatMap(savedImages -> existingBlogPostMono.map(existingBlogPost -> {
-                                List<BlogImages> allImages = existingBlogPost.getImages().stream()
-                                        .filter(image -> !removedImageKeys.contains(image.getImageKey()))
-                                        .collect(Collectors.toList());
-                                return allImages;
-                            }));
+            // Remove images that are no longer needed
+            return deleteRemovedImages(removedImageKeys)
+                    .thenMany(setImageBlogId(newImagesToAdd, blogPostId)) // Save new images
+                    .collectList()
+                    .flatMap(savedImages -> existingBlogPostMono.map(existingBlogPost -> {
+                        List<BlogImages> allImages = existingBlogPost.getImages().stream()
+                                .filter(image -> !removedImageKeys.contains(image.getImageKey()))
+                                .collect(Collectors.toList());
+
+                        // Add newly saved images to the list
+                        allImages.addAll(savedImages);
+                        return allImages;
+                    }));
+        });
+    }
+
+    private Flux<BlogImages> setImageBlogId(Set<String> imageUrls, Long blogPostId) {
+        return Flux.fromIterable(imageUrls)
+                .flatMap(imagesRepository::findByUrl)
+                .flatMap(img -> {
+                    img.setBlogPostId(blogPostId);
+                    return imagesRepository.save(img);
                 });
     }
+
 
     private Mono<Void>  deleteRemovedImages(Set<String> removedImageKeys) {
         if (removedImageKeys.isEmpty()) {

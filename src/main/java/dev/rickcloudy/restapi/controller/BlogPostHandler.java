@@ -103,8 +103,51 @@ public class BlogPostHandler implements Handler {
 
     @Override
     public Mono<ServerResponse> update(ServerRequest request) {
-        return null;
+        Long id = Long.parseLong(request.pathVariable("id")); // Extract ID from path variable
+
+        return request.multipartData()
+                .flatMap(multiPartMap -> {
+                    // Extract the JSON part (assuming the JSON is sent as a "blogPost" field)
+                    Part blogPostPart = multiPartMap.getFirst("blogPost");
+                    if (blogPostPart == null) {
+                        return ServerResponse.badRequest()
+                                .body(Mono.just(ResponseDTO.fail(null, "Missing 'blogPost' part in the request")),
+                                        ResponseDTO.class);
+                    }
+
+                    // Parse JSON string to BlogPosts object
+                    Mono<BlogPosts> blogPostMono = DataBufferUtils.join(blogPostPart.content())
+                            .map(dataBuffer -> {
+                                byte[] bytes = new byte[dataBuffer.readableByteCount()];
+                                dataBuffer.read(bytes);
+                                DataBufferUtils.release(dataBuffer);
+                                return new String(bytes, StandardCharsets.UTF_8);
+                            })
+                            .flatMap(jsonString -> {
+                                try {
+                                    System.out.println("Received blogPost JSON: " + jsonString);
+                                    return Mono.just(new ObjectMapper().readValue(jsonString, BlogPosts.class));
+                                } catch (JsonProcessingException e) {
+                                    return Mono.error(new InvalidJsonException(HttpStatus.BAD_REQUEST, "Invalid JSON Request"));
+                                }
+                            });
+
+                    // Extract image URLs (assuming they are sent as "imageUrl" form fields)
+                    Flux<String> imageUrls = Flux.fromIterable(multiPartMap.get("imageUrl"))
+                            .filter(part -> part instanceof FormFieldPart)
+                            .cast(FormFieldPart.class)
+                            .map(FormFieldPart::value);
+
+                    // Combine extracted BlogPosts and image URLs, then call update service
+                    return blogPostMono.flatMap(blogPost ->
+                            blogPostService.updateBlogPost(id, blogPost, imageUrls)
+                                    .flatMap(updatedBlogPost -> ServerResponse.ok()
+                                            .contentType(MediaType.APPLICATION_JSON)
+                                            .body(Mono.just(ResponseDTO.success(updatedBlogPost, "Blog post updated successfully")), ResponseDTO.class))
+                    );
+                });
     }
+
 
     @Override
     public Mono<ServerResponse> delete(ServerRequest request) {
