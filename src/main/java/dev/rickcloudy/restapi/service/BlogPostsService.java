@@ -136,7 +136,6 @@ public class BlogPostsService {
     @Transactional
     public Mono<BlogPostsDTO> updateBlogPost(Long id, BlogPosts blogPost, Flux<String> imageUrls) {
         return blogPostsRepository.findById(id)
-                .flatMap(blogPostsDTO -> Mono.just(mapper.dtoToBlogPosts(blogPostsDTO)))
                 .flatMap(existingBlogPost -> {
                     if (!Objects.equals(id, blogPost.getId())) {
                         return Mono.error(new HttpException(HttpStatus.FORBIDDEN, "ID Does Not Match"));
