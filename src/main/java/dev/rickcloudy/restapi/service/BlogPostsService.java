@@ -135,7 +135,7 @@ public class BlogPostsService {
 
     @Transactional
     public Mono<BlogPostsDTO> updateBlogPost(Long id, BlogPosts blogPost, Flux<String> imageUrls) {
-        return this.getBlogPostById(id)
+        return blogPostsRepository.findById(id)
                 .flatMap(blogPostsDTO -> Mono.just(mapper.dtoToBlogPosts(blogPostsDTO)))
                 .flatMap(existingBlogPost -> {
                     if (!Objects.equals(id, blogPost.getId())) {
