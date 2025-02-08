@@ -166,6 +166,12 @@ public class BlogPostHandler implements Handler {
                         ResponseDTO.class));
     }
 
+    public Mono<ServerResponse> findByIdAdmin(ServerRequest request) {
+        return blogPostService.getBlogPostByIdAdmin(Long.parseLong(request.pathVariable("id")))
+                .flatMap(blogPost -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+                        .body(Mono.just(ResponseDTO.success(blogPost, "Blog post found")), BlogPostsDTO.class));
+    }
+
     @Override
     public Mono<ServerResponse> findByParams(ServerRequest request) {
         // Extract query parameters from the request

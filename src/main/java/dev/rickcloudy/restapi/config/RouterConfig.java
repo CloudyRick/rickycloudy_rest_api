@@ -41,6 +41,7 @@ public class RouterConfig {
 				.GET("/blogs/{id}", handler::findById) // Get By Id
 				.GET("/blogs", handler::findByParams)
 				.GET("/admin/blogs", handler::findAllAdmin)
+				.GET("/admin/blogs/{id}", handler::findByIdAdmin)
 //				.PUT()
 //				.DELETE()
 //				.GET() // Get All

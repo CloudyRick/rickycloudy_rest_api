@@ -122,6 +122,18 @@ public class BlogPostsService {
                 });
     }
 
+    public Mono<BlogPostsDTO> getBlogPostByIdAdmin(Long id) {
+        return blogPostsRepository.findById(id)
+                .switchIfEmpty(Mono.error(new BlogPostNotFoundException(HttpStatus.NOT_FOUND, "Blog Post Not Found")))
+                .flatMap(blogPost -> {
+                    BlogPostsDTO blogPostsDTO = mapper.blogPostsToBlogPostsDTO(blogPost);
+                    return imagesRepository.findByBlogPostId(blogPost.getId())
+                            .collectList()
+                            .doOnNext(blogPostsDTO::setImages)
+                            .thenReturn(blogPostsDTO);
+                });
+    }
+
     public Flux<BlogPostsDTO> getAllBlogPostsAdmin() {
         return blogPostsRepository.findAll()
                 .flatMap(blogPost -> {
