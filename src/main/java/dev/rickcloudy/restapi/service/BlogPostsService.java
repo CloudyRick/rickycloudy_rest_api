@@ -1,5 +1,7 @@
 package dev.rickcloudy.restapi.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.rickcloudy.restapi.dto.BlogPostsDTO;
 import dev.rickcloudy.restapi.entity.BlogImages;
 import dev.rickcloudy.restapi.entity.BlogPosts;
@@ -60,32 +62,49 @@ public class BlogPostsService {
             errors.getAllErrors().forEach(error -> errorMessage.append(error.getDefaultMessage()).append(" "));
             return Mono.error(new HttpException(HttpStatus.BAD_REQUEST, errorMessage.toString()));
         }
+
         return userRepository.findById(blogPost.getAuthorId())
                 .switchIfEmpty(Mono.error(new UserNotFoundException(HttpStatus.NOT_FOUND, "User Not Found")))
                 .flatMap(user -> blogPostsRepository.save(blogPost))
-                .flatMap(savedBlogPost -> {
-                    return imagesUrl.flatMap(url -> {
-                                log.debug("IMAGE URL {}", url);
-                                return imagesRepository.findByUrl(url);
-                            })
-                            .flatMap(blogImage -> {
-                                blogImage.setBlogPostId(savedBlogPost.getId());
-                                return imagesRepository.save(blogImage);
-                            })
-                            .collectList()
-                            .flatMap(images -> {
-                                BlogPostsDTO dto = mapper.blogPostsToBlogPostsDTO(savedBlogPost);
-                                dto.setImages(images);
-                                return Mono.just(dto);
-                            });
-                })
-                        .doOnError(err -> {
-                            // Delete the uploaded images if an error occurs
-                            log.error("Error saving blog post: {}", err);
-                        });
+                .flatMap(savedBlogPost -> imagesUrl
+                        .flatMap(this::parseJsonArray)
+                        .flatMap(url -> imagesRepository.findByUrl(url)
+                                .doOnSuccess(res -> log.debug("FOUND IMAGE FIND BY ID {}", res))
+                                .switchIfEmpty(Mono.defer(() -> {
+                                    log.warn("No image found for URL: {}", url);
+                                    return Mono.empty();
+                                }))
+                                .flatMap(blogImage -> {
+                                    blogImage.setBlogPostId(savedBlogPost.getId());
+                                    return imagesRepository.save(blogImage);
+                                })
+                        )
+                        .collectList()  // Wait until all image updates are completed
+                        .map(updatedImages -> {
+                            BlogPostsDTO dto = mapper.blogPostsToBlogPostsDTO(savedBlogPost);
+                            dto.setImages(updatedImages);
+                            return dto;
+                        }))
+                .onErrorResume(err -> {
+                    log.error("Error saving blog post: {}", err);
+                    return Mono.error(err); // Ensures transaction rollback
+                });
     }
 
 
+    /**
+     * Parses a JSON-like string (e.g., '["url1", "url2"]') into a Flux<String> of individual URLs.
+     */
+    private Flux<String> parseJsonArray(String jsonString) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            List<String> urls = objectMapper.readValue(jsonString, new TypeReference<List<String>>() {});
+            return Flux.fromIterable(urls);
+        } catch (Exception e) {
+            log.error("Error parsing JSON array: {}", jsonString, e);
+            return Flux.just(jsonString); // If parsing fails, return as a single item
+        }
+    }
 
     private Flux<BlogImages> saveImage(Flux<FilePart> image, Long blogPostId) {
         return s3Service.uploadBlogImages(image)
@@ -101,26 +120,29 @@ public class BlogPostsService {
                 .doOnError(err -> log.error("Error Saving Image: {}", err));
     }
 
-    public Mono<BlogPostsDTO> getBlogPostById(Long id) {
-        return blogPostsRepository.findById(id)
-                .switchIfEmpty(Mono.error(new BlogPostNotFoundException(HttpStatus.NOT_FOUND, "Blog Post Not Found")))
-                .flatMap(res -> {
-                    if (res.getStatus() == BlogStatus.DELETED) {
-                        return Mono.error(new BlogPostNotFoundException(HttpStatus.NOT_FOUND, "Blog Post Not Found"));
-                    }
-                    if(!(res.getStatus() == BlogStatus.PUBLISHED)) {
-                        return Mono.error(new UnauthorizedException("Unathorized to access blog post with id " + id));
-                    }
-                    return Mono.just(res);
-                })
-                .flatMap(blogPost -> {
-                    BlogPostsDTO blogPostsDTO = mapper.blogPostsToBlogPostsDTO(blogPost);
-                    return imagesRepository.findByBlogPostId(blogPost.getId())
-                            .collectList()
-                            .doOnNext(blogPostsDTO::setImages)
-                            .thenReturn(blogPostsDTO);
-                });
-    }
+        public Mono<BlogPostsDTO> getBlogPostById(Long id) {
+            return blogPostsRepository.findById(id)
+                    .switchIfEmpty(Mono.error(new BlogPostNotFoundException(HttpStatus.NOT_FOUND, "Blog Post Not Found")))
+                    .flatMap(res -> {
+                        if (res.getStatus() == BlogStatus.DELETED) {
+                            return Mono.error(new BlogPostNotFoundException(HttpStatus.NOT_FOUND, "Blog Post Not Found"));
+                        }
+                        if(!(res.getStatus() == BlogStatus.PUBLISHED)) {
+                            return Mono.error(new UnauthorizedException("Unathorized to access blog post with id " + id));
+                        }
+                        return Mono.just(res);
+                    })
+                    .flatMap(blogPost -> {
+                        BlogPostsDTO blogPostsDTO = mapper.blogPostsToBlogPostsDTO(blogPost);
+                        return imagesRepository.findByBlogPostId(blogPost.getId())
+                                .collectList()
+                                .map(imageList -> {
+                                    log.debug("Image List {}", imageList);
+                                    blogPostsDTO.setImages(imageList);
+                                    return blogPostsDTO;
+                                });
+                    });
+        }
 
     public Mono<BlogPostsDTO> getBlogPostByIdAdmin(Long id) {
         return blogPostsRepository.findById(id)
@@ -129,8 +151,10 @@ public class BlogPostsService {
                     BlogPostsDTO blogPostsDTO = mapper.blogPostsToBlogPostsDTO(blogPost);
                     return imagesRepository.findByBlogPostId(blogPost.getId())
                             .collectList()
-                            .doOnNext(blogPostsDTO::setImages)
-                            .thenReturn(blogPostsDTO);
+                            .map(imageList -> {
+                                blogPostsDTO.setImages(imageList);
+                                return blogPostsDTO;
+                            });
                 });
     }
 
@@ -140,14 +164,17 @@ public class BlogPostsService {
                     BlogPostsDTO blogPostsDTO = mapper.blogPostsToBlogPostsDTO(blogPost);
                     return imagesRepository.findByBlogPostId(blogPost.getId())
                             .collectList()
-                            .doOnNext(blogPostsDTO::setImages)
-                            .thenReturn(blogPostsDTO);
+                            .map(imageList -> {
+                                blogPostsDTO.setImages(imageList);
+                                return blogPostsDTO;
+                            });
                 });
     }
 
     @Transactional
     public Mono<BlogPostsDTO> updateBlogPost(Long id, BlogPosts blogPost, Flux<String> imageUrls) {
         return blogPostsRepository.findById(id)
+                .switchIfEmpty(Mono.error(new HttpException(HttpStatus.NOT_FOUND, "Blog Post Not Found")))
                 .flatMap(existingBlogPost -> {
                     if (!Objects.equals(id, blogPost.getId())) {
                         return Mono.error(new HttpException(HttpStatus.FORBIDDEN, "ID Does Not Match"));
@@ -155,28 +182,28 @@ public class BlogPostsService {
                     if (!Objects.equals(existingBlogPost.getAuthorId(), blogPost.getAuthorId())) {
                         return Mono.error(new HttpException(HttpStatus.FORBIDDEN, "Author ID Does Not Match"));
                     }
+
                     blogPost.setCreatedAt(existingBlogPost.getCreatedAt());
                     blogPost.setUpdatedAt(ZonedDateTime.now());
-                    log.debug("Blog Post {}", blogPost);
-                    // If new image URLs are provided, update the blog post with them
-                    if (imageUrls != null) {
-                        return this.handleImageChanges(id, imageUrls)
-                                .flatMap(updatedImageUrls -> blogPostsRepository.save(blogPost)
-                                        .flatMap(savedBlogPost -> {
-                                            BlogPostsDTO dto = mapper.blogPostsToBlogPostsDTO(savedBlogPost);
-                                            dto.setImages(updatedImageUrls);
-                                            return Mono.just(dto);
-                                }));
-                    }
+                    log.debug("Updated Blog Post: {}", blogPost);
 
-                    // If no images, just save and return
-                    return blogPostsRepository.save(blogPost)
-                            .flatMap(savedBlogPost -> {
-                                BlogPostsDTO dto = mapper.blogPostsToBlogPostsDTO(savedBlogPost);
-                                return Mono.just(dto);
-                            });
+                    // Ensure imageUrls is never null (avoids NullPointerException)
+                    Flux<String> validImageUrls = imageUrls != null ? imageUrls.flatMap(this::parseJsonArray) : Flux.empty();
+
+                    return this.handleImageChanges(id, validImageUrls)
+                            .flatMap(updatedImageUrls -> blogPostsRepository.save(blogPost)
+                                    .map(savedBlogPost -> {
+                                        BlogPostsDTO dto = mapper.blogPostsToBlogPostsDTO(savedBlogPost);
+                                        dto.setImages(updatedImageUrls);
+                                        return dto;
+                                    }));
+                })
+                .onErrorResume(err -> {
+                    log.error("Error updating blog post: {}", err.getMessage());
+                    return Mono.error(err);
                 });
     }
+
 
 
     private Mono<List<BlogImages>> handleImageChanges(Long blogPostId, Flux<String> imageUrls) {

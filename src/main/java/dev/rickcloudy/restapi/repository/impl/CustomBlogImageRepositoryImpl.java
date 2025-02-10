@@ -36,7 +36,8 @@ public class CustomBlogImageRepositoryImpl implements CustomBlogImageRepository 
         return template.select(BlogImages.class)
                 .from("blog_images")
                 .matching(Query.query(where("blog_post_id").is(blogPostId)))
-                .all();
+                .all()
+                .doOnNext(res -> log.debug("Find By Blog Id Result {}", res));
     }
 
     @Override
@@ -63,11 +64,11 @@ public class CustomBlogImageRepositoryImpl implements CustomBlogImageRepository 
             // Otherwise, remove any stray " characters.
             cleanedUrl = cleanedUrl.replace("\"", "");
         }
+        log.debug("Cleaned URL {}", cleanedUrl);
 
         return template.select(BlogImages.class)
                 .from("blog_images")
                 .matching(Query.query(Criteria.where("image_url").is(cleanedUrl)))
-                .one()  // Ensure execution of the query
-                .doOnSuccess(res -> log.debug("Found image: {}", res));
+                .one();  // Ensure execution of the query
     }
 }

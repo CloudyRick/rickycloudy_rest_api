@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 
 # Function to check if a command exists
 command_exists() {
